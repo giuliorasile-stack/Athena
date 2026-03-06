@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V8.4 Definitive Cloud</title>
+    <title>Athena Lab V8.5 Definitive</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -67,7 +67,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V8.4</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V8.5</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -93,7 +93,7 @@
                 <input type="text" id="manualSearch" class="search-input" placeholder="Cerca per titolo (Italia)...">
                 <button class="btn-search" onclick="searchManual()">GO</button>
             </div>
-            <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (300 TITOLI - 90GG)</button>
+            <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (400 TITOLI - 180GG)</button>
             <button id="dumpBtn" class="btn-dump" onclick="downloadDump()">📂 ESPORTA DUMP API (.TXT)</button>
             <div id="resultsContainer"></div>
         </div>
@@ -123,7 +123,7 @@
         const TMDB_API_KEY = "e2d58e4dfdd0a14cdce19d08d49bb21e";
         
         let accessToken = null, vaultFileId = null;
-        let currentVault = []; // Sostituisce il localStorage
+        let currentVault = []; 
         
         let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list', searchMode = 'title';
         let lastScrollPos = 0;
@@ -193,7 +193,7 @@
             updateStatus("Cloud Sincronizzato ✓");
         }
 
-        // --- 3. MOTORE LOGICO E UI ORIGINALE (V8.0) ---
+        // --- 3. MOTORE LOGICO E UI ORIGINALE (V8.0 / V8.5) ---
         window.onload = () => { gapi.load('client', intializeGapiClient); };
 
         function setSearchMode(mode) {
@@ -205,15 +205,21 @@
 
         async function fetchTimeMachine() {
             const resultsContainer = document.getElementById('resultsContainer');
-            resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Viaggio nel tempo (90gg/300 Titoli)...</p>';
+            resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Viaggio nel tempo (180gg/400 Titoli)...</p>';
             const today = new Date(), past = new Date();
-            past.setDate(today.getDate() - 90);
+            past.setDate(today.getDate() - 180);
             const pStr = past.toISOString().split('T')[0], fStr = new Date(today.getTime() + 21*24*60*60*1000).toISOString().split('T')[0];
             try {
                 const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${pStr}&release_date.lte=${fStr}&with_release_type=2|3`;
-                const responses = await Promise.all([...Array(15).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`)));
+                const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`)));
                 const datasets = await Promise.all(responses.map(r => r.json()));
                 let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
+                
+                // FILTRO MATEMATICO RIGIDO: Elimina film con data precedente ai 180gg precisi
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - 180);
+                combined = combined.filter(m => m.release_date && new Date(m.release_date) >= cutoffDate);
+                
                 currentMovieArray = Array.from(new Map(combined.map(m => [m.id, m])).values());
                 document.getElementById('dumpBtn').style.display = 'block';
                 renderUI();
@@ -240,6 +246,7 @@
                     const data = await res.json();
                     currentMovieArray = data.results || [];
                 }
+                document.getElementById('manualSearch').value = ""; // SVUOTA IL CAMPO DI RICERCA AUTOMATICAMENTE
                 renderUI();
             } catch (e) { alert("Errore di rete."); }
         }
@@ -315,7 +322,7 @@
             window.scrollTo(0, 0);
         }
 
-        // --- 4. FUNZIONI DI SCRITTURA/LETTURA CLOUD SOSTITUTIVE DEL LOCALSTORAGE ---
+        // --- 4. FUNZIONI DI SCRITTURA/LETTURA CLOUD ---
         async function saveToWL(id, title, poster, date) {
             const strId = String(id);
             const validatedDate = (date && date !== 'undefined') ? date : 'Data da confermare';
@@ -351,10 +358,17 @@
         
         async function removeWL(id) {
             if(confirm("Eliminare definitivamente dal Cloud?")) {
+                // FIX IPHONE: Elimino prima localmente per sbloccare l'interfaccia istantaneamente
                 currentVault = currentVault.filter(x => String(x.id) !== String(id));
+                renderWatchlist(); 
+                
+                // Ora chiamo il cloud in background senza far aspettare l'utente
                 updateStatus("Cancellazione Cloud in corso...");
-                await saveToCloud();
-                renderWatchlist();
+                try {
+                    await saveToCloud();
+                } catch(e) {
+                    alert("Errore di connessione. Modifica non salvata su Drive.");
+                }
             }
         }
 
