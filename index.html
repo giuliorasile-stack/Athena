@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V8.5 Definitive</title>
+    <title>Athena Lab V8.6 Definitive + Trailer</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -56,7 +56,8 @@
         .movie-info { padding: 20px; }
         .data-label { color: var(--gold); font-weight: 900; font-family: 'Montserrat'; font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; display: block; }
         .data-value { color: #fff; font-size: 0.95rem; display: block; margin-top: 4px; line-height: 1.4; }
-        .btn-save { background: var(--green); color: #000; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 25px; cursor: pointer; }
+        .btn-save { background: var(--green); color: #000; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 10px; cursor: pointer; }
+        .btn-trailer { background: #ff0000; color: #fff; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 25px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
         
         .wl-item { display: flex; align-items: center; background: #1a1a1a; padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #333; }
         .wl-poster { width: 50px; height: 75px; border-radius: 6px; margin-right: 15px; object-fit: cover; cursor: pointer; }
@@ -67,7 +68,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V8.5</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V8.6</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -193,7 +194,7 @@
             updateStatus("Cloud Sincronizzato ✓");
         }
 
-        // --- 3. MOTORE LOGICO E UI ORIGINALE (V8.0 / V8.5) ---
+        // --- 3. MOTORE LOGICO E UI ORIGINALE (V8.0 / V8.5 / V8.6) ---
         window.onload = () => { gapi.load('client', intializeGapiClient); };
 
         function setSearchMode(mode) {
@@ -215,7 +216,7 @@
                 const datasets = await Promise.all(responses.map(r => r.json()));
                 let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
                 
-                // FILTRO MATEMATICO RIGIDO: Elimina film con data precedente ai 180gg precisi
+                // FILTRO MATEMATICO RIGIDO
                 const cutoffDate = new Date();
                 cutoffDate.setDate(cutoffDate.getDate() - 180);
                 combined = combined.filter(m => m.release_date && new Date(m.release_date) >= cutoffDate);
@@ -246,7 +247,7 @@
                     const data = await res.json();
                     currentMovieArray = data.results || [];
                 }
-                document.getElementById('manualSearch').value = ""; // SVUOTA IL CAMPO DI RICERCA AUTOMATICAMENTE
+                document.getElementById('manualSearch').value = ""; // SVUOTA IL CAMPO
                 renderUI();
             } catch (e) { alert("Errore di rete."); }
         }
@@ -284,6 +285,9 @@
             const cast = m.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D";
             const genres = m.genres?.map(g => g.name).join(', ') || "N/D";
 
+            // Creazione URL per la ricerca del Trailer su YouTube
+            const youtubeQuery = `https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}`;
+
             document.getElementById('main-db-view').style.display = 'none';
             const detailView = document.getElementById('detail-view');
             detailView.style.display = 'block';
@@ -299,6 +303,8 @@
                         <span class="data-label">Regia</span><span class="data-value">${director}</span>
                         <span class="data-label">Cast Principale</span><span class="data-value">${cast}</span>
                         <span class="data-label">Sinossi</span><p style="font-size:0.95rem; line-height:1.5;">${m.overview || "Trama non disponibile."}</p>
+                        
+                        <button class="btn-trailer" onclick="window.open('${youtubeQuery}', '_blank')">▶ GUARDA TRAILER SU YOUTUBE</button>
                         <button onclick="saveToWL('${m.id}','${m.title.replace(/'/g,"\\'")}','${poster}','${m.release_date}')" class="btn-save">💾 SALVA NEL CLOUD</button>
                     </div>
                 </div>
@@ -358,11 +364,9 @@
         
         async function removeWL(id) {
             if(confirm("Eliminare definitivamente dal Cloud?")) {
-                // FIX IPHONE: Elimino prima localmente per sbloccare l'interfaccia istantaneamente
                 currentVault = currentVault.filter(x => String(x.id) !== String(id));
                 renderWatchlist(); 
                 
-                // Ora chiamo il cloud in background senza far aspettare l'utente
                 updateStatus("Cancellazione Cloud in corso...");
                 try {
                     await saveToCloud();
