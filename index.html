@@ -3,51 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Athena Lab V8.2 Cloud</title>
+    <title>Athena Lab V8.2 Cloud Full</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <style>
-        :root { --bg-dark: #0f0f0f; --gold: #f5c518; --green: #2ecc71; --text: #fff; }
-        body { background: var(--bg-dark); color: var(--text); font-family: sans-serif; margin: 0; text-align: center; }
-        .status-bar { background: #1a1a1a; padding: 10px; font-size: 0.8rem; color: var(--gold); border-bottom: 1px solid #333; }
-        .btn-sync { background: var(--gold); border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        :root { --bg-dark: #0f0f0f; --gold: #f5c518; --green: #2ecc71; --text: #fff; --card-bg: rgba(255,255,255,0.05); }
+        body { background: var(--bg-dark); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 50px; }
+        .sticky-header { position: sticky; top: 0; z-index: 1000; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid var(--gold); }
+        .header-title h1 { color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 1.4rem; margin: 0; padding: 15px; text-align: center; }
+        .top-nav { display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; }
+        .nav-item { font-family: 'Montserrat'; font-weight: 900; font-size: 0.8rem; cursor: pointer; color: #fff; }
+        .nav-item.active { color: var(--gold); }
+        .sync-status { font-size: 0.65rem; color: var(--gold); padding: 5px; background: #000; text-align: center; }
+        .tab-content { display: none; padding: 15px; }
+        .tab-content.active { display: block; }
+        
+        /* Bottoni e Search */
+        .search-container { display: flex; gap: 8px; margin-bottom: 15px; }
+        .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; }
+        .btn-gold { background: var(--gold); border: none; padding: 12px 20px; border-radius: 10px; font-weight: 900; cursor: pointer; }
+        .btn-now-playing { width: 100%; padding: 16px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-weight: 900; margin-bottom: 20px; }
+        
+        /* Griglia Film */
+        .movie-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; text-align: left; }
+        .movie-poster { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+        .movie-info { padding: 15px; }
+        .movie-title { font-weight: 900; font-size: 1.1rem; color: var(--gold); margin-bottom: 5px; }
+        .movie-meta { font-size: 0.8rem; color: #aaa; margin-bottom: 10px; }
+        .btn-save { background: var(--green); color: #000; width: 100%; padding: 12px; border-radius: 8px; font-weight: 900; border: none; }
+        
+        /* Overlay Login */
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     </style>
 </head>
 <body>
 
-    <div id="syncStatus" class="status-bar">IN ATTESA DI AUTENTICAZIONE DRIVE...</div>
-    
-    <h1>ATHENA LAB V8.2</h1>
-    <p>Sincronizzazione Cloud con "Cinema Lab cassaforte"</p>
-    
-    <button id="loginBtn" class="btn-sync" onclick="handleAuthClick()">ACCEDI A GOOGLE DRIVE</button>
+    <div id="loginOverlay">
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900;">ATHENA LAB V8.2</h1>
+        <p>Sincronizzazione Cloud Richiesta</p>
+        <button class="btn-gold" style="padding: 20px 40px;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
+    </div>
+
+    <div id="syncIndicator" class="sync-status">IN ATTESA DI AUTENTICAZIONE DRIVE...</div>
+
+    <div class="sticky-header">
+        <div class="header-title"><h1>ATHENA LAB V8.2</h1></div>
+        <div class="top-nav">
+            <div id="nav-db" class="nav-item active" onclick="switchTab('database', this)">🔍 DATABASE</div>
+            <div id="nav-wl" class="nav-item" onclick="switchTab('watchlist', this)">💾 CASSAFORTE</div>
+        </div>
+    </div>
+
+    <div id="tab-database" class="tab-content active">
+        <div class="search-container">
+            <input type="text" id="manualSearch" class="search-input" placeholder="Cerca un titolo...">
+            <button class="btn-gold" onclick="searchManual()">GO</button>
+        </div>
+        <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (400 TITOLI - 120GG)</button>
+        <div id="resultsContainer"></div>
+    </div>
+
+    <div id="tab-watchlist" class="tab-content">
+        <div id="watchlistContainer"></div>
+    </div>
 
     <script>
         const CLIENT_ID = '62527185116-dvsbjccvpib45bu7k3are8aeekadas3v.apps.googleusercontent.com';
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        const TMDB_API_KEY = "e2d58e4dfdd0a14cdce19d08d49bb21e";
         const FOLDER_NAME = "Cinema Lab cassaforte";
         const FILE_NAME = "athena_vault.json";
-
+        
         let accessToken = null;
         let vaultFileId = null;
+        let currentVault = [];
 
-        function updateStatus(msg) { document.getElementById('syncStatus').innerText = msg; }
+        function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
 
-        // 1. Inizializzazione API
         async function intializeGapiClient() {
-            await gapi.client.init({
-                discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-            });
+            await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] });
         }
 
         function handleAuthClick() {
             const tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CLIENT_ID,
-                scope: SCOPES,
+                scope: 'https://www.googleapis.com/auth/drive.file',
                 callback: async (resp) => {
                     if (resp.error) return;
                     accessToken = resp.access_token;
-                    document.getElementById('loginBtn').style.display = 'none';
+                    document.getElementById('loginOverlay').style.display = 'none';
                     await startCloudSync();
                 },
             });
@@ -55,56 +99,142 @@
         }
 
         async function startCloudSync() {
-            updateStatus("Ricerca cartella in corso...");
+            updateStatus("Sincronizzazione Cloud in corso...");
             try {
                 await gapi.client.load('drive', 'v3');
+                const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` });
+                let folderId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : await createFolder();
                 
-                // Cerca la cartella
-                const folderResp = await gapi.client.drive.files.list({
-                    q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`
-                });
-
-                let folderId;
-                if (folderResp.result.files.length > 0) {
-                    folderId = folderResp.result.files[0].id;
-                } else {
-                    updateStatus("Creazione cartella 'Cinema Lab cassaforte'...");
-                    const folder = await gapi.client.drive.files.create({
-                        resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
-                        fields: 'id'
-                    });
-                    folderId = folder.result.id;
-                }
-
-                // Cerca il file
-                const fileResp = await gapi.client.drive.files.list({
-                    q: `name='${FILE_NAME}' and '${folderId}' in parents and trashed=false`
-                });
-
+                const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${folderId}' in parents and trashed=false` });
                 if (fileResp.result.files.length > 0) {
                     vaultFileId = fileResp.result.files[0].id;
-                    updateStatus("Cloud Sincronizzato ✓");
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, {
+                        headers: { Authorization: `Bearer ${accessToken}` }
+                    });
+                    currentVault = await response.json();
                 } else {
-                    updateStatus("Inizializzazione Cassaforte...");
                     await createInitialFile(folderId);
-                    updateStatus("Cloud Sincronizzato ✓");
                 }
-            } catch (err) {
-                updateStatus("Errore: " + err.message);
+                updateStatus("Cloud Sincronizzato ✓");
+                if(document.getElementById('tab-watchlist').classList.contains('active')) renderWatchlist();
+            } catch (e) { updateStatus("Errore Sync Cloud"); }
+        }
+
+        async function saveToCloud() {
+            updateStatus("Salvataggio invisibile...");
+            const boundary = 'foo_bar_baz';
+            const metadata = { name: FILE_NAME, mimeType: 'application/json' };
+            const multipartRequestBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${boundary}--`;
+            
+            await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, {
+                method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+                body: multipartRequestBody
+            });
+            updateStatus("Cloud Sincronizzato ✓");
+        }
+
+        async function fetchTimeMachine() {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '<p style="color:var(--gold)">Analisi 400 Titoli (120gg)...</p>';
+            let allMovies = [];
+            const pastDate = new Date(); pastDate.setDate(pastDate.getDate() - 120);
+            const dateStr = pastDate.toISOString().split('T')[0];
+
+            try {
+                for(let i=1; i<=20; i++) {
+                    const r = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${dateStr}&with_release_type=2|3&page=${i}`);
+                    const data = await r.json();
+                    if(data.results) allMovies = allMovies.concat(data.results);
+                }
+                renderResults(allMovies, container);
+            } catch (e) { container.innerHTML = "Errore scannerizzazione."; }
+        }
+
+        async function searchManual() {
+            const query = document.getElementById('manualSearch').value;
+            if(!query) return;
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '<p>Ricerca in corso...</p>';
+            const r = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
+            const data = await r.json();
+            renderResults(data.results, container);
+        }
+
+        function renderResults(movies, container) {
+            container.innerHTML = "";
+            movies.forEach(m => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.innerHTML = `
+                    <img class="movie-poster" src="https://image.tmdb.org/t/p/w500${m.poster_path}" onerror="this.src='https://via.placeholder.com/500x750?text=No+Poster'">
+                    <div class="movie-info">
+                        <div class="movie-title">${m.title}</div>
+                        <div class="movie-meta">${m.release_date || 'Data N.D.'}</div>
+                        <button class="btn-save" onclick='addToVault(${JSON.stringify(m).replace(/'/g, "&apos;")})'>SALVA IN CASSAFORTE</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function addToVault(movie) {
+            if(!currentVault.find(v => v.id === movie.id)) {
+                currentVault.unshift(movie);
+                saveToCloud();
+                alert("Salvato nel Cloud!");
+            } else {
+                alert("Titolo già presente.");
             }
+        }
+
+        function renderWatchlist() {
+            const container = document.getElementById('watchlistContainer');
+            container.innerHTML = currentVault.length === 0 ? "<p>La cassaforte è vuota.</p>" : "";
+            currentVault.forEach((m, index) => {
+                const item = document.createElement('div');
+                item.className = 'movie-card';
+                item.innerHTML = `
+                    <div class="movie-info">
+                        <div class="movie-title">${m.title}</div>
+                        <div class="movie-meta">${m.release_date}</div>
+                        <button class="btn-gold" style="background:var(--red); color:white; width:100%;" onclick="removeFromVault(${index})">ELIMINA</button>
+                    </div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function removeFromVault(index) {
+            if(confirm("Eliminare dal Cloud?")) {
+                currentVault.splice(index, 1);
+                saveToCloud();
+                renderWatchlist();
+            }
+        }
+
+        async function createFolder() {
+            const metadata = { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' };
+            const folder = await gapi.client.drive.files.create({ resource: metadata, fields: 'id' });
+            return folder.result.id;
         }
 
         async function createInitialFile(folderId) {
             const boundary = 'foo_bar_baz';
             const metadata = { name: FILE_NAME, parents: [folderId], mimeType: 'application/json' };
-            const content = JSON.stringify([]);
-            const multipartRequestBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
-
+            const multipartRequestBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${boundary}--`;
             await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
                 body: multipartRequestBody
             });
+            vaultFileId = (await gapi.client.drive.files.list({ q: `name='${FILE_NAME}'` })).result.files[0].id;
+        }
+
+        function switchTab(tab, el) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            el.classList.add('active');
+            if(tab === 'watchlist') renderWatchlist();
         }
 
         window.onload = () => { gapi.load('client', intializeGapiClient); };
