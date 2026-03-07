@@ -44,7 +44,6 @@
         .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
         .filter-group input { padding: 8px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 0.8rem; }
         
-        /* Stile personalizzato per i datalist su alcuni browser */
         input::-webkit-calendar-picker-indicator { opacity: 0.5; filter: invert(1); cursor: pointer; }
 
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
@@ -110,12 +109,12 @@
             
             <div id="filtersPanel" class="filters-panel">
                 <div class="filter-group">
-                    <label>Dal (Anno)</label>
-                    <input type="number" id="filterYearFrom" placeholder="es. 1990" onkeypress="if(event.key === 'Enter') searchManual()">
+                    <label>Dal (Data)</label>
+                    <input type="text" id="filterYearFrom" placeholder="gg/mm/aaaa" onkeypress="if(event.key === 'Enter') searchManual()">
                 </div>
                 <div class="filter-group">
-                    <label>Al (Anno)</label>
-                    <input type="number" id="filterYearTo" placeholder="es. 2026" onkeypress="if(event.key === 'Enter') searchManual()">
+                    <label>Al (Data)</label>
+                    <input type="text" id="filterYearTo" placeholder="gg/mm/aaaa" onkeypress="if(event.key === 'Enter') searchManual()">
                 </div>
                 <div class="filter-group">
                     <label>Paese</label>
@@ -146,7 +145,6 @@
     <div id="tab-watchlist" class="tab-content"><div id="watchlistContainer"></div></div>
 
     <script>
-        // --- 1. CONFIGURAZIONI CLOUD E TMDB ---
         const CLIENT_ID = '62527185116-dvsbjccvpib45bu7k3are8aeekadas3v.apps.googleusercontent.com';
         const FOLDER_NAME = "Cinema Lab cassaforte";
         const FILE_NAME = "athena_vault.json";
@@ -157,7 +155,6 @@
         let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
         let lastScrollPos = 0;
 
-        // --- 2. MOTORE INDEXED-DB (CAVEAU LOCALE) ---
         let localDB = [];
 
         function initLocalDB() {
@@ -177,7 +174,7 @@
                     if (ev.target.result) {
                         localDB = ev.target.result.data;
                         updateDbStatus();
-                        populateCountryDropdown(); // Inizializza la tendina dinamica
+                        populateCountryDropdown();
                     }
                 };
             };
@@ -199,7 +196,7 @@
                         store.put({ id: "master_db", data: localDB });
                         tx.oncomplete = () => {
                             updateDbStatus();
-                            populateCountryDropdown(); // Aggiorna la tendina al nuovo caricamento
+                            populateCountryDropdown();
                             alert("✅ Database memorizzato permanentemente nel Caveau del browser!");
                         };
                     };
@@ -218,47 +215,46 @@
                 return;
             }
             
-            let maxDate = "1900-01-01";
+            let maxDate = "01/01/1900";
+            
+            // Funzione interna per confrontare date gg/mm/aaaa
+            const toDateObj = (s) => {
+                if(!s || !s.includes('/')) return new Date(0);
+                const p = s.split('/');
+                return new Date(p[2], p[1]-1, p[0]);
+            };
+
             localDB.forEach(m => {
-                if (m.release_date && m.release_date > maxDate) maxDate = m.release_date;
+                if (m.release_date && toDateObj(m.release_date) > toDateObj(maxDate)) maxDate = m.release_date;
             });
             
-            const maxDateObj = new Date(maxDate);
+            const maxDateObj = toDateObj(maxDate);
             const today = new Date();
-            
             const diffTime = today.getTime() - maxDateObj.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
-            const formattedDate = maxDate.split('-').reverse().join('/');
-            
             if (diffDays <= 21) {
                 statusDiv.className = "db-status green";
-                statusDiv.innerHTML = `🟢 DB Allineato (${formattedDate})`;
+                statusDiv.innerHTML = `🟢 DB Allineato (${maxDate})`;
             } else {
                 statusDiv.className = "db-status red";
-                statusDiv.innerHTML = `🔴 Aggiorna DB (${formattedDate})`;
+                statusDiv.innerHTML = `🔴 Aggiorna DB (${maxDate})`;
             }
         }
 
-        // MOTORE DI POPOLAMENTO AUTOMATICO TENDINA NAZIONI
         function populateCountryDropdown() {
             if (localDB.length === 0) return;
             const countrySet = new Set();
-            
             localDB.forEach(m => {
                 if (m.paese && m.paese !== "N/D") {
-                    // Divide "Italia, Francia" in singole nazioni pulite
                     m.paese.split(',').forEach(c => {
                         const trimmed = c.trim();
                         if (trimmed) countrySet.add(trimmed);
                     });
                 }
             });
-
             const dataList = document.getElementById('countryList');
-            dataList.innerHTML = ''; // Svuota la vecchia lista
-            
-            // Ordina alfabeticamente e inietta
+            dataList.innerHTML = ''; 
             Array.from(countrySet).sort().forEach(c => {
                 const option = document.createElement('option');
                 option.value = c;
@@ -270,7 +266,6 @@
             document.getElementById("filtersPanel").classList.toggle("active");
         }
 
-        // --- 3. MOTORE GOOGLE DRIVE CLOUD ---
         function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
 
         async function intializeGapiClient() {
@@ -297,7 +292,6 @@
             try {
                 await gapi.client.load('drive', 'v3');
                 const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` });
-                
                 let folderId;
                 if (folderResp.result.files.length > 0) {
                     folderId = folderResp.result.files[0].id;
@@ -306,7 +300,6 @@
                     const folder = await gapi.client.drive.files.create({ resource: fMetadata, fields: 'id' });
                     folderId = folder.result.id;
                 }
-                
                 const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${folderId}' in parents and trashed=false` });
                 if (fileResp.result.files.length > 0) {
                     vaultFileId = fileResp.result.files[0].id;
@@ -337,7 +330,6 @@
             updateStatus("Cloud Sincronizzato ✓");
         }
 
-        // --- 4. MOTORE LOGICO (CASCATA & UI) ---
         async function fetchTimeMachine() {
             const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Viaggio nel tempo (180gg/400 Titoli)...</p>';
@@ -349,10 +341,8 @@
                 const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`)));
                 const datasets = await Promise.all(responses.map(r => r.json()));
                 let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
-                
                 const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 180);
                 combined = combined.filter(m => m.release_date && new Date(m.release_date) >= cutoffDate);
-                
                 currentMovieArray = Array.from(new Map(combined.map(m => [m.id, m])).values());
                 renderUI();
             } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
@@ -360,8 +350,8 @@
 
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
-            const yearFrom = document.getElementById('filterYearFrom').value;
-            const yearTo = document.getElementById('filterYearTo').value;
+            const yearFrom = document.getElementById('filterYearFrom').value.trim();
+            const yearTo = document.getElementById('filterYearTo').value.trim();
             let country = document.getElementById('filterCountry').value.toLowerCase().trim();
             
             if (country === 'italy') country = 'italia';
@@ -372,20 +362,28 @@
             
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
-            // FASE 1: Ricerca Locale
+            // FUNZIONE DI CONVERSIONE CHIRURGICA PER COMPARAZIONE GG/MM/AAAA
+            const toCompNum = (s) => {
+                if(!s || !s.includes('/')) return null;
+                const p = s.split('/');
+                return parseInt(p[2] + p[1].padStart(2,'0') + p[0].padStart(2,'0'));
+            };
+
             if (localDB.length > 0) {
+                const fromNum = toCompNum(yearFrom);
+                const toNum = toCompNum(yearTo);
+
                 let results = localDB.filter(m => {
                     const matchText = !query || 
                         (m.title && m.title.toLowerCase().includes(query)) || 
                         (m.cast && m.cast.toLowerCase().includes(query)) || 
                         (m.director && m.director.toLowerCase().includes(query));
                     
-                    const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
-                    const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
-                    const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
+                    const movieNum = toCompNum(m.release_date);
+                    const matchDate = (!fromNum || movieNum >= fromNum) && (!toNum || movieNum <= toNum);
                     const matchCountry = !country || (m.paese && m.paese.toLowerCase().includes(country));
                     
-                    return matchText && matchYearFrom && matchYearTo && matchCountry;
+                    return matchText && matchDate && matchCountry;
                 });
                 
                 if (results.length > 0) {
@@ -408,7 +406,6 @@
                 }
             }
 
-            // FASE 2: Fallback TMDB
             try {
                 if (query) {
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
@@ -432,8 +429,6 @@
                     }
                 } else {
                     let discoverUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
-                    if (yearFrom) discoverUrl += `&primary_release_date.gte=${yearFrom}-01-01`;
-                    if (yearTo) discoverUrl += `&primary_release_date.lte=${yearTo}-12-31`;
                     const res = await fetch(discoverUrl);
                     const data = await res.json();
                     currentMovieArray = data.results || [];
@@ -444,14 +439,21 @@
 
         function renderUI() {
             const resultsContainer = document.getElementById('resultsContainer');
-            currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
+            currentMovieArray.sort((a, b) => {
+                const toDateObj = (s) => {
+                    if(!s || !s.includes('/')) return new Date(0);
+                    const p = s.split('/');
+                    return new Date(p[2], p[1]-1, p[0]);
+                };
+                return currentSortMode === 'recent' ? toDateObj(b.release_date) - toDateObj(a.release_date) : (b.popularity || 0) - (a.popularity || 0);
+            });
             
             let html = `<div class="sort-toggle"><div class="sort-btn ${currentSortMode === 'recent' ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI</div><div class="sort-btn ${currentSortMode === 'popular' ? 'active' : ''}" onclick="toggleSort('popular')">🔥 POPOLARITÀ</div></div><div class="view-toggle"><div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div><div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div></div>`;
             
             if (currentViewMode === 'grid') {
                 html += `<div class="movies-grid">`;
                 currentMovieArray.forEach(m => {
-                    const badge = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
+                    const badge = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date || 'N/D');
                     const posterUrl = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
                     html += `<div class="grid-item" onclick="openDetails(${m.id})"><div class="movie-badge">${badge}</div><img src="${posterUrl}" class="grid-poster"><div class="grid-title">${m.title}</div></div>`;
                 });
@@ -459,7 +461,7 @@
             } else {
                 html += `<div class="list-view-container">`;
                 currentMovieArray.forEach(m => { 
-                    const dataField = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
+                    const dataField = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date || 'N/D');
                     html += `<div class="list-item" onclick="openDetails(${m.id})"><div class="list-title">${m.title}</div><div class="list-data-dynamic">${dataField}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span></div></div>`; 
                 });
                 html += `</div>`;
@@ -470,9 +472,7 @@
         async function openDetails(id) {
             lastScrollPos = window.scrollY;
             let m;
-            
             const localMatch = localDB.find(x => String(x.id) === String(id));
-            
             if (localMatch) {
                 m = {
                     id: localMatch.id,
@@ -504,10 +504,8 @@
                     cast: tmdbData.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D"
                 };
             }
-
             const poster = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=No+Poster';
             const youtubeQuery = `https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}`;
-
             document.getElementById('main-db-view').style.display = 'none';
             const detailView = document.getElementById('detail-view');
             detailView.style.display = 'block';
@@ -517,14 +515,13 @@
                     <img src="${poster}" style="width:100%">
                     <div class="movie-info">
                         <h2>${m.title}</h2>
-                        <span class="data-label">Uscita Italia</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span>
+                        <span class="data-label">Uscita Italia</span><span class="data-value">${m.release_date || 'N/D'}</span>
                         <span class="data-label">Produzione</span><span class="data-value">${m.paese}</span>
                         <span class="data-label">Popolarità</span><span class="data-value">🔥 ${Math.round(m.popularity || 0)}</span>
                         <span class="data-label">Genere</span><span class="data-value">${m.genres}</span>
                         <span class="data-label">Regia</span><span class="data-value">${m.director}</span>
                         <span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span>
                         <span class="data-label">Sinossi</span><p style="font-size:0.95rem; line-height:1.5;">${m.overview || "Trama non disponibile."}</p>
-                        
                         <button class="btn-trailer" onclick="window.open('${youtubeQuery}', '_blank')">▶ GUARDA TRAILER SU YOUTUBE</button>
                         <button onclick="saveToWL('${m.id}','${m.title.replace(/'/g,"\\'")}','${poster}','${m.release_date}')" class="btn-save">💾 SALVA NEL CLOUD</button>
                     </div>
@@ -549,12 +546,10 @@
             window.scrollTo(0, 0);
         }
 
-        // --- 5. GOOGLE DRIVE SCRITTURA ---
         async function saveToWL(id, title, poster, date) {
             const strId = String(id);
-            const validatedDate = (date && date !== 'undefined') ? date : 'Data da confermare';
+            const validatedDate = date || 'Data da confermare';
             let existingIdx = currentVault.findIndex(x => String(x.id) === strId);
-            
             if(existingIdx !== -1) {
                 if(validatedDate !== 'Data da confermare') currentVault[existingIdx].date = validatedDate;
                 alert("Aggiornato nel Cloud!");
@@ -574,7 +569,7 @@
                     <img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}')">
                     <div class="wl-content" onclick="viewFromVault('${m.id}')">
                         <div class="wl-title" style="font-weight:700;">${m.title}</div>
-                        <div style="font-size:0.75rem; color:var(--gold); font-weight:700;">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div>
+                        <div style="font-size:0.75rem; color:var(--gold); font-weight:700;">📅 ${m.date || 'N/D'}</div>
                     </div>
                     <button class="btn-delete-wl" onclick="removeWL('${m.id}')">X</button>
                 </div>
