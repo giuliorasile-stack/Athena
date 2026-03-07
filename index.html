@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V8.6 Definitive + Trailer</title>
+    <title>Athena Lab V9.0 Ibrida</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -17,11 +17,17 @@
         
         /* Overlay Google Login */
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .sync-status { font-size: 0.65rem; color: var(--gold); padding: 5px; background: #000; text-align: center; }
+        .sync-status { font-size: 0.65rem; color: var(--gold); padding: 5px; background: #000; text-align: center; border-bottom: 1px solid #333; }
 
         .sticky-header { position: sticky; top: 0; z-index: 1000; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid var(--gold); }
-        .header-title { padding: 15px 20px 10px; text-align: center; }
+        .header-title { padding: 15px 20px 10px; display: flex; justify-content: space-between; align-items: center; }
         .header-title h1 { color: var(--gold); font-size: 1.5rem; font-weight: 900; margin: 0; font-family: 'Montserrat'; }
+        
+        /* Semaforo Database */
+        .db-status { font-size: 0.65rem; padding: 5px 10px; border-radius: 12px; background: #222; font-weight: 800; cursor: pointer; border: 1px solid #444; text-transform: uppercase; }
+        .db-status.green { border-color: var(--green); color: var(--green); }
+        .db-status.red { border-color: var(--red); color: var(--red); }
+
         .top-nav { display: flex; justify-content: space-around; padding: 10px 0; }
         .nav-item { color: #fff; text-align: center; font-family: 'Montserrat'; font-size: 0.85rem; font-weight: 900; flex: 1; cursor: pointer; padding: 5px 0; }
         .nav-item.active { color: var(--gold); }
@@ -29,13 +35,18 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .search-mode-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
-        .mode-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
-        .mode-btn.active { background: #333; color: var(--gold); }
-        
-        .search-container { display: flex; gap: 8px; margin-bottom: 15px; }
+        /* Omnibar & Filtri */
+        .search-container { display: flex; gap: 8px; margin-bottom: 10px; }
         .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; }
+        .btn-filter { background: #333; border: none; padding: 0 15px; border-radius: 10px; font-size: 1.2rem; cursor: pointer; color: white; }
         .btn-search { background: var(--gold); border: none; padding: 0 20px; border-radius: 10px; font-weight: 900; cursor: pointer; color: #000; }
+        
+        .filters-panel { display: none; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
+        .filters-panel.active { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 80px; }
+        .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
+        .filter-group input { padding: 8px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 0.8rem; }
+
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
         .btn-dump { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--red); background: rgba(231,76,60,0.1); color: var(--red); font-weight: 800; font-size: 0.7rem; margin-bottom: 15px; display: none; cursor: pointer; }
         
@@ -49,7 +60,7 @@
         .grid-title { font-size: 0.8rem; font-weight: 700; padding: 8px; text-align: center; }
         .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); }
         .list-item { background: #1a1a1a; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-bottom: 6px; cursor: pointer; }
-        .list-data-dynamic { color: var(--gold); font-size: 0.75rem; font-weight: 900; font-family: 'Montserrat'; }
+        .list-data-dynamic { color: var(--gold); font-size: 0.75rem; font-weight: 900; font-family: 'Montserrat'; text-align: right; }
         
         .btn-back { background: #333; color: #fff; width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 800; margin-bottom: 15px; font-size: 0.85rem; cursor: pointer; }
         .movie-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
@@ -68,7 +79,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V8.6</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.0</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -76,7 +87,13 @@
     <div id="syncIndicator" class="sync-status">ATTESA CONNESSIONE DRIVE...</div>
 
     <div class="sticky-header">
-        <div class="header-title"><h1>ATHENA LAB</h1></div>
+        <div class="header-title">
+            <h1>ATHENA LAB</h1>
+            <div id="dbStatus" class="db-status red" onclick="document.getElementById('fileInput').click()">
+                🔴 DB: Assente (Solo TMDB)
+            </div>
+            <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadLocalDatabase(event)">
+        </div>
         <div class="top-nav">
             <div id="nav-db" class="nav-item active" onclick="switchTab('database', this)">🔍 DATABASE</div>
             <div id="nav-cinema" class="nav-item" onclick="switchTab('cinema', this)">🎟️ IN SALA</div>
@@ -86,14 +103,27 @@
 
     <div id="tab-database" class="tab-content active">
         <div id="main-db-view">
-            <div class="search-mode-toggle">
-                <div id="mode-title" class="mode-btn active" onclick="setSearchMode('title')">TITOLO</div>
-                <div id="mode-actor" class="mode-btn" onclick="setSearchMode('actor')">ATTORE</div>
-            </div>
             <div class="search-container">
-                <input type="text" id="manualSearch" class="search-input" placeholder="Cerca per titolo (Italia)...">
+                <input type="text" id="manualSearch" class="search-input" placeholder="Cerca titolo, regista o attore..." onkeypress="if(event.key === 'Enter') searchManual()">
+                <button class="btn-filter" onclick="toggleFilters()">⚙️</button>
                 <button class="btn-search" onclick="searchManual()">GO</button>
             </div>
+            
+            <div id="filtersPanel" class="filters-panel">
+                <div class="filter-group">
+                    <label>Dal (Anno)</label>
+                    <input type="number" id="filterYearFrom" placeholder="es. 1990">
+                </div>
+                <div class="filter-group">
+                    <label>Al (Anno)</label>
+                    <input type="number" id="filterYearTo" placeholder="es. 2026">
+                </div>
+                <div class="filter-group">
+                    <label>Paese</label>
+                    <input type="text" id="filterCountry" placeholder="es. Italia">
+                </div>
+            </div>
+
             <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (400 TITOLI - 180GG)</button>
             <button id="dumpBtn" class="btn-dump" onclick="downloadDump()">📂 ESPORTA DUMP API (.TXT)</button>
             <div id="resultsContainer"></div>
@@ -125,16 +155,99 @@
         
         let accessToken = null, vaultFileId = null;
         let currentVault = []; 
-        
-        let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list', searchMode = 'title';
+        let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
         let lastScrollPos = 0;
 
-        // --- 2. MOTORE GOOGLE DRIVE CLOUD ---
+        // --- 2. MOTORE INDEXED-DB (CAVEAU LOCALE) ---
+        let localDB = [];
+
+        function initLocalDB() {
+            const request = indexedDB.open("AthenaVaultDB", 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains("json_store")) {
+                    db.createObjectStore("json_store", { keyPath: "id" });
+                }
+            };
+            request.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction("json_store", "readonly");
+                const store = tx.objectStore("json_store");
+                const getReq = store.get("master_db");
+                getReq.onsuccess = (ev) => {
+                    if (ev.target.result) {
+                        localDB = ev.target.result.data;
+                        updateDbStatus();
+                    }
+                };
+            };
+        }
+        initLocalDB();
+
+        function loadLocalDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    localDB = JSON.parse(e.target.result);
+                    const request = indexedDB.open("AthenaVaultDB", 1);
+                    request.onsuccess = (ev) => {
+                        const db = ev.target.result;
+                        const tx = db.transaction("json_store", "readwrite");
+                        const store = tx.objectStore("json_store");
+                        store.put({ id: "master_db", data: localDB });
+                        tx.oncomplete = () => {
+                            updateDbStatus();
+                            alert("✅ Database memorizzato permanentemente nel Caveau del browser!");
+                        };
+                    };
+                } catch (err) {
+                    alert("❌ Errore nella lettura del file JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateDbStatus() {
+            const statusDiv = document.getElementById("dbStatus");
+            if (localDB.length === 0) {
+                statusDiv.className = "db-status red";
+                statusDiv.innerHTML = "🔴 DB: Assente (Solo TMDB)";
+                return;
+            }
+            
+            let maxDate = "1900-01-01";
+            localDB.forEach(m => {
+                if (m.release_date && m.release_date > maxDate) maxDate = m.release_date;
+            });
+            
+            const maxDateObj = new Date(maxDate);
+            const today = new Date();
+            const diffDays = Math.ceil(Math.abs(today - maxDateObj) / (1000 * 60 * 60 * 24));
+            
+            const formattedDate = maxDate.split('-').reverse().join('/');
+            if (diffDays <= 15) {
+                statusDiv.className = "db-status green";
+                statusDiv.innerHTML = `🟢 DB Allineato (${formattedDate})`;
+            } else {
+                statusDiv.className = "db-status red";
+                statusDiv.innerHTML = `🔴 Aggiorna DB (${formattedDate})`;
+            }
+        }
+
+        function toggleFilters() {
+            document.getElementById("filtersPanel").classList.toggle("active");
+        }
+
+        // --- 3. MOTORE GOOGLE DRIVE CLOUD (Invariato) ---
         function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
 
         async function intializeGapiClient() {
             await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] });
         }
+
+        window.onload = () => { gapi.load('client', intializeGapiClient); };
 
         function handleAuthClick() {
             const tokenClient = google.accounts.oauth2.initTokenClient({
@@ -194,16 +307,7 @@
             updateStatus("Cloud Sincronizzato ✓");
         }
 
-        // --- 3. MOTORE LOGICO E UI ORIGINALE (V8.0 / V8.5 / V8.6) ---
-        window.onload = () => { gapi.load('client', intializeGapiClient); };
-
-        function setSearchMode(mode) {
-            searchMode = mode;
-            document.getElementById('mode-title').classList.toggle('active', mode === 'title');
-            document.getElementById('mode-actor').classList.toggle('active', mode === 'actor');
-            document.getElementById('manualSearch').placeholder = mode === 'title' ? "Cerca per titolo (Italia)..." : "Cerca film con l'attore...";
-        }
-
+        // --- 4. MOTORE LOGICO (CASCATA & UI) ---
         async function fetchTimeMachine() {
             const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Viaggio nel tempo (180gg/400 Titoli)...</p>';
@@ -216,9 +320,7 @@
                 const datasets = await Promise.all(responses.map(r => r.json()));
                 let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
                 
-                // FILTRO MATEMATICO RIGIDO
-                const cutoffDate = new Date();
-                cutoffDate.setDate(cutoffDate.getDate() - 180);
+                const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 180);
                 combined = combined.filter(m => m.release_date && new Date(m.release_date) >= cutoffDate);
                 
                 currentMovieArray = Array.from(new Map(combined.map(m => [m.id, m])).values());
@@ -228,28 +330,71 @@
         }
 
         async function searchManual() {
-            const query = document.getElementById('manualSearch').value;
-            if(!query) return;
+            const query = document.getElementById('manualSearch').value.toLowerCase().trim();
+            const yearFrom = document.getElementById('filterYearFrom').value;
+            const yearTo = document.getElementById('filterYearTo').value;
+            const country = document.getElementById('filterCountry').value.toLowerCase().trim();
+            
             const resultsContainer = document.getElementById('resultsContainer');
-            resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Interrogazione Database...</p>';
-            try {
-                if(searchMode === 'actor') {
-                    const personRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                    const personData = await personRes.json();
-                    if(personData.results && personData.results.length > 0) {
-                        const personId = personData.results[0].id;
-                        const movieRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${personId}&sort_by=release_date.desc`);
-                        const movieData = await movieRes.json();
-                        currentMovieArray = movieData.results || [];
-                    } else { alert("Attore non trovato."); resultsContainer.innerHTML = ""; return; }
-                } else {
-                    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
-                    const data = await res.json();
-                    currentMovieArray = data.results || [];
+            if(!query && !yearFrom && !yearTo && !country) return;
+            
+            resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
+            
+            // FASE 1: Ricerca Locale (Se il Caveau è pieno)
+            if (localDB.length > 0) {
+                let results = localDB.filter(m => {
+                    const matchText = !query || 
+                        (m.title && m.title.toLowerCase().includes(query)) || 
+                        (m.cast && m.cast.toLowerCase().includes(query)) || 
+                        (m.director && m.director.toLowerCase().includes(query));
+                    
+                    const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
+                    const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
+                    const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
+                    const matchCountry = !country || (m.paese && m.paese.toLowerCase().includes(country));
+                    
+                    return matchText && matchYearFrom && matchYearTo && matchCountry;
+                });
+                
+                if (results.length > 0) {
+                    currentMovieArray = results;
+                    renderUI();
+                    return;
                 }
-                document.getElementById('manualSearch').value = ""; // SVUOTA IL CAMPO
-                renderUI();
-            } catch (e) { alert("Errore di rete."); }
+                
+                // Se non trova nulla localmente e ci sono filtri stretti, si ferma.
+                if (yearFrom || yearTo || country) {
+                    currentMovieArray = [];
+                    renderUI();
+                    resultsContainer.innerHTML = '<p style="text-align:center; color:#fff;">Nessun risultato nel Caveau locale con questi parametri.</p>';
+                    return;
+                }
+            }
+
+            // FASE 2: Fallback TMDB a Cascata (Se DB vuoto o query testo non trovata localmente)
+            try {
+                // Tenta ricerca Film
+                const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    currentMovieArray = data.results;
+                    renderUI();
+                } else {
+                    // Tenta ricerca Attore (Cross-field online)
+                    const pRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
+                    const pData = await pRes.json();
+                    if (pData.results && pData.results.length > 0) {
+                        const mRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${pData.results[0].id}&sort_by=release_date.desc`);
+                        const mData = await mRes.json();
+                        currentMovieArray = mData.results || [];
+                        renderUI();
+                    } else {
+                        currentMovieArray = [];
+                        renderUI();
+                        resultsContainer.innerHTML = '<p style="text-align:center; color:#fff;">Nessun risultato trovato neanche online.</p>';
+                    }
+                }
+            } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete TMDB.</p>'; }
         }
 
         function renderUI() {
@@ -262,14 +407,16 @@
                 html += `<div class="movies-grid">`;
                 currentMovieArray.forEach(m => {
                     const badge = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
-                    html += `<div class="grid-item" onclick="openDetails(${m.id})"><div class="movie-badge">${badge}</div><img src="${m.poster_path ? 'https://image.tmdb.org/t/p/w300'+m.poster_path : 'https://via.placeholder.com/300x450'}" class="grid-poster"><div class="grid-title">${m.title}</div></div>`;
+                    // Gestione locandine anche per risultati diretti da DB locale
+                    const posterUrl = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450';
+                    html += `<div class="grid-item" onclick="openDetails(${m.id})"><div class="movie-badge">${badge}</div><img src="${posterUrl}" class="grid-poster"><div class="grid-title">${m.title}</div></div>`;
                 });
                 html += `</div>`;
             } else {
                 html += `<div class="list-view-container">`;
                 currentMovieArray.forEach(m => { 
                     const dataField = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
-                    html += `<div class="list-item" onclick="openDetails(${m.id})"><div class="list-title">${m.title}</div><div class="list-data-dynamic">${dataField}</div></div>`; 
+                    html += `<div class="list-item" onclick="openDetails(${m.id})"><div class="list-title">${m.title}</div><div class="list-data-dynamic">${dataField}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span></div></div>`; 
                 });
                 html += `</div>`;
             }
@@ -278,14 +425,45 @@
 
         async function openDetails(id) {
             lastScrollPos = window.scrollY;
-            const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,watch/providers`);
-            const m = await res.json();
-            const poster = m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster';
-            const director = m.credits?.crew?.find(person => person.job === 'Director')?.name || "N/D";
-            const cast = m.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D";
-            const genres = m.genres?.map(g => g.name).join(', ') || "N/D";
+            let m;
+            
+            // Cerca prima nel Caveau Locale, operazione a costo zero
+            const localMatch = localDB.find(x => String(x.id) === String(id));
+            
+            if (localMatch) {
+                m = {
+                    id: localMatch.id,
+                    title: localMatch.title,
+                    poster_path: localMatch.poster_path,
+                    release_date: localMatch.release_date,
+                    popularity: localMatch.popularity,
+                    overview: localMatch.overview,
+                    paese: localMatch.paese || "N/D",
+                    genres: localMatch.genres || "N/D",
+                    director: localMatch.director || "N/D",
+                    cast: localMatch.cast || "N/D"
+                };
+            } else {
+                // Se non c'è, scarica la scheda da TMDB
+                document.getElementById('resultsContainer').innerHTML = '<p style="text-align:center; color:#f5c518;">Recupero dettagli online...</p>';
+                const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`);
+                const tmdbData = await res.json();
+                renderUI(); // Ripristina la view dietro
+                m = {
+                    id: tmdbData.id,
+                    title: tmdbData.title,
+                    poster_path: tmdbData.poster_path,
+                    release_date: tmdbData.release_date,
+                    popularity: tmdbData.popularity,
+                    overview: tmdbData.overview,
+                    paese: tmdbData.production_countries?.map(c => c.name).join(', ') || "N/D",
+                    genres: tmdbData.genres?.map(g => g.name).join(', ') || "N/D",
+                    director: tmdbData.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D",
+                    cast: tmdbData.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D"
+                };
+            }
 
-            // Creazione URL per la ricerca del Trailer su YouTube
+            const poster = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=No+Poster';
             const youtubeQuery = `https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}`;
 
             document.getElementById('main-db-view').style.display = 'none';
@@ -298,10 +476,11 @@
                     <div class="movie-info">
                         <h2>${m.title}</h2>
                         <span class="data-label">Uscita Italia</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span>
-                        <span class="data-label">Popolarità</span><span class="data-value">🔥 ${Math.round(m.popularity)}</span>
-                        <span class="data-label">Genere</span><span class="data-value">${genres}</span>
-                        <span class="data-label">Regia</span><span class="data-value">${director}</span>
-                        <span class="data-label">Cast Principale</span><span class="data-value">${cast}</span>
+                        <span class="data-label">Produzione</span><span class="data-value">${m.paese}</span>
+                        <span class="data-label">Popolarità</span><span class="data-value">🔥 ${Math.round(m.popularity || 0)}</span>
+                        <span class="data-label">Genere</span><span class="data-value">${m.genres}</span>
+                        <span class="data-label">Regia</span><span class="data-value">${m.director}</span>
+                        <span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span>
                         <span class="data-label">Sinossi</span><p style="font-size:0.95rem; line-height:1.5;">${m.overview || "Trama non disponibile."}</p>
                         
                         <button class="btn-trailer" onclick="window.open('${youtubeQuery}', '_blank')">▶ GUARDA TRAILER SU YOUTUBE</button>
@@ -328,7 +507,7 @@
             window.scrollTo(0, 0);
         }
 
-        // --- 4. FUNZIONI DI SCRITTURA/LETTURA CLOUD ---
+        // --- 5. GOOGLE DRIVE SCRITTURA ---
         async function saveToWL(id, title, poster, date) {
             const strId = String(id);
             const validatedDate = (date && date !== 'undefined') ? date : 'Data da confermare';
@@ -366,13 +545,8 @@
             if(confirm("Eliminare definitivamente dal Cloud?")) {
                 currentVault = currentVault.filter(x => String(x.id) !== String(id));
                 renderWatchlist(); 
-                
                 updateStatus("Cancellazione Cloud in corso...");
-                try {
-                    await saveToCloud();
-                } catch(e) {
-                    alert("Errore di connessione. Modifica non salvata su Drive.");
-                }
+                try { await saveToCloud(); } catch(e) { alert("Errore di connessione. Modifica non salvata su Drive."); }
             }
         }
 
