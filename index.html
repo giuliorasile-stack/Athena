@@ -176,7 +176,7 @@
                     if (ev.target.result) {
                         localDB = ev.target.result.data;
                         updateDbStatus();
-                        populateCountryDropdown(); // Inizializza la tendina dinamica
+                        populateCountryDropdown();
                     }
                 };
             };
@@ -198,7 +198,7 @@
                         store.put({ id: "master_db", data: localDB });
                         tx.oncomplete = () => {
                             updateDbStatus();
-                            populateCountryDropdown(); // Aggiorna la tendina al nuovo caricamento
+                            populateCountryDropdown();
                             alert("✅ Database memorizzato permanentemente nel Caveau del browser!");
                         };
                     };
@@ -209,9 +209,9 @@
             reader.readAsText(file);
         }
 
-        // HELPER CHIRURGICO PER COMPARAZIONE DATE GG/MM/AAAA
-        const toSortableDate = (s) => {
-            if (!s || typeof s !== 'string' || !s.includes('/')) return 0;
+        // HELPER DI CONFRONTO DATE GG/MM/AAAA (COPIA CARBONE - AGGIUNTO SOLO PER RICERCA)
+        const toComp = (s) => {
+            if (!s || typeof s !== 'string' || !s.includes('/')) return null;
             const p = s.split('/');
             return parseInt(p[2] + p[1].padStart(2, '0') + p[0].padStart(2, '0'));
         };
@@ -224,38 +224,29 @@
                 return;
             }
             
-            let maxDateStr = "01/01/1900";
-            let maxDateNum = 19000101;
-
+            // RIPRISTINATA ROUTINE ORIGINALE DEL VECCHIO FILE
+            let maxDate = "1900-01-01";
             localDB.forEach(m => {
-                const currentNum = toSortableDate(m.release_date);
-                if (currentNum > maxDateNum) {
-                    maxDateNum = currentNum;
-                    maxDateStr = m.release_date;
-                }
+                if (m.release_date && m.release_date > maxDate) maxDate = m.release_date;
             });
             
-            const p = maxDateStr.split('/');
-            const maxDateObj = new Date(p[2], p[1]-1, p[0]);
+            const maxDateObj = new Date(maxDate);
             const today = new Date();
-            
             const diffTime = today.getTime() - maxDateObj.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays <= 21) {
                 statusDiv.className = "db-status green";
-                statusDiv.innerHTML = `🟢 DB Allineato (${maxDateStr})`;
+                statusDiv.innerHTML = `🟢 DB Allineato (${maxDate})`;
             } else {
                 statusDiv.className = "db-status red";
-                statusDiv.innerHTML = `🔴 Aggiorna DB (${maxDateStr})`;
+                statusDiv.innerHTML = `🔴 Aggiorna DB (${maxDate})`;
             }
         }
 
-        // MOTORE DI POPOLAMENTO AUTOMATICO TENDINA NAZIONI
         function populateCountryDropdown() {
             if (localDB.length === 0) return;
             const countrySet = new Set();
-            
             localDB.forEach(m => {
                 if (m.paese && m.paese !== "N/D") {
                     m.paese.split(',').forEach(c => {
@@ -264,7 +255,6 @@
                     });
                 }
             });
-
             const dataList = document.getElementById('countryList');
             dataList.innerHTML = ''; 
             Array.from(countrySet).sort().forEach(c => {
@@ -278,7 +268,6 @@
             document.getElementById("filtersPanel").classList.toggle("active");
         }
 
-        // --- 3. MOTORE GOOGLE DRIVE CLOUD ---
         function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
 
         async function intializeGapiClient() {
@@ -305,7 +294,6 @@
             try {
                 await gapi.client.load('drive', 'v3');
                 const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` });
-                
                 let folderId;
                 if (folderResp.result.files.length > 0) {
                     folderId = folderResp.result.files[0].id;
@@ -314,7 +302,6 @@
                     const folder = await gapi.client.drive.files.create({ resource: fMetadata, fields: 'id' });
                     folderId = folder.result.id;
                 }
-                
                 const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${folderId}' in parents and trashed=false` });
                 if (fileResp.result.files.length > 0) {
                     vaultFileId = fileResp.result.files[0].id;
@@ -345,7 +332,6 @@
             updateStatus("Cloud Sincronizzato ✓");
         }
 
-        // --- 4. MOTORE LOGICO (CASCATA & UI) ---
         async function fetchTimeMachine() {
             const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Viaggio nel tempo (180gg/400 Titoli)...</p>';
@@ -357,10 +343,8 @@
                 const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`)));
                 const datasets = await Promise.all(responses.map(r => r.json()));
                 let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
-                
                 const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 180);
                 combined = combined.filter(m => m.release_date && new Date(m.release_date) >= cutoffDate);
-                
                 currentMovieArray = Array.from(new Map(combined.map(m => [m.id, m])).values());
                 renderUI();
             } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
@@ -380,10 +364,9 @@
             
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
-            // FASE 1: Ricerca Locale (Logica Chirurgica per date GG/MM/AAAA)
             if (localDB.length > 0) {
-                const fromNum = toSortableDate(yearFrom);
-                const toNum = toSortableDate(yearTo);
+                const fromNum = toComp(yearFrom);
+                const toNum = toComp(yearTo);
 
                 let results = localDB.filter(m => {
                     const matchText = !query || 
@@ -391,9 +374,9 @@
                         (m.cast && m.cast.toLowerCase().includes(query)) || 
                         (m.director && m.director.toLowerCase().includes(query));
                     
-                    const movieDateNum = toSortableDate(m.release_date);
-                    const matchDate = (!fromNum || movieDateNum >= fromNum) && 
-                                      (!toNum || movieDateNum <= toNum);
+                    const movieDateNum = toComp(m.release_date);
+                    const matchDate = (!fromNum || (movieDateNum && movieDateNum >= fromNum)) && 
+                                      (!toNum || (movieDateNum && movieDateNum <= toNum));
                     const matchCountry = !country || (m.paese && m.paese.toLowerCase().includes(country));
                     
                     return matchText && matchDate && matchCountry;
@@ -419,7 +402,6 @@
                 }
             }
 
-            // FASE 2: Fallback TMDB
             try {
                 if (query) {
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
@@ -453,9 +435,7 @@
 
         function renderUI() {
             const resultsContainer = document.getElementById('resultsContainer');
-            currentMovieArray.sort((a, b) => {
-                return toSortableDate(b.release_date) - toSortableDate(a.release_date);
-            });
+            currentMovieArray.sort((a, b) => new Date(b.release_date || 0) - new Date(a.release_date || 0));
             
             let html = `<div class="sort-toggle"><div class="sort-btn ${currentSortMode === 'recent' ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI</div><div class="sort-btn ${currentSortMode === 'popular' ? 'active' : ''}" onclick="toggleSort('popular')">🔥 POPOLARITÀ</div></div><div class="view-toggle"><div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div><div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div></div>`;
             
