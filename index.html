@@ -209,6 +209,13 @@
             reader.readAsText(file);
         }
 
+        // HELPER CHIRURGICO PER COMPARAZIONE DATE GG/MM/AAAA
+        const toSortableDate = (s) => {
+            if (!s || typeof s !== 'string' || !s.includes('/')) return 0;
+            const p = s.split('/');
+            return parseInt(p[2] + p[1].padStart(2, '0') + p[0].padStart(2, '0'));
+        };
+
         function updateDbStatus() {
             const statusDiv = document.getElementById("dbStatus");
             if (localDB.length === 0) {
@@ -217,25 +224,30 @@
                 return;
             }
             
-            let maxDate = "1900-01-01";
+            let maxDateStr = "01/01/1900";
+            let maxDateNum = 19000101;
+
             localDB.forEach(m => {
-                if (m.release_date && m.release_date > maxDate) maxDate = m.release_date;
+                const currentNum = toSortableDate(m.release_date);
+                if (currentNum > maxDateNum) {
+                    maxDateNum = currentNum;
+                    maxDateStr = m.release_date;
+                }
             });
             
-            const maxDateObj = new Date(maxDate);
+            const p = maxDateStr.split('/');
+            const maxDateObj = new Date(p[2], p[1]-1, p[0]);
             const today = new Date();
             
             const diffTime = today.getTime() - maxDateObj.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
-            const formattedDate = maxDate.split('-').reverse().join('/');
-            
             if (diffDays <= 21) {
                 statusDiv.className = "db-status green";
-                statusDiv.innerHTML = `🟢 DB Allineato (${formattedDate})`;
+                statusDiv.innerHTML = `🟢 DB Allineato (${maxDateStr})`;
             } else {
                 statusDiv.className = "db-status red";
-                statusDiv.innerHTML = `🔴 Aggiorna DB (${formattedDate})`;
+                statusDiv.innerHTML = `🔴 Aggiorna DB (${maxDateStr})`;
             }
         }
 
@@ -246,7 +258,6 @@
             
             localDB.forEach(m => {
                 if (m.paese && m.paese !== "N/D") {
-                    // Divide "Italia, Francia" in singole nazioni pulite
                     m.paese.split(',').forEach(c => {
                         const trimmed = c.trim();
                         if (trimmed) countrySet.add(trimmed);
@@ -255,9 +266,7 @@
             });
 
             const dataList = document.getElementById('countryList');
-            dataList.innerHTML = ''; // Svuota la vecchia lista
-            
-            // Ordina alfabeticamente e inietta
+            dataList.innerHTML = ''; 
             Array.from(countrySet).sort().forEach(c => {
                 const option = document.createElement('option');
                 option.value = c;
@@ -371,16 +380,10 @@
             
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
-            // FASE 1: Ricerca Locale (Copia Carbone con Variazione Chirurgica Date)
+            // FASE 1: Ricerca Locale (Logica Chirurgica per date GG/MM/AAAA)
             if (localDB.length > 0) {
-                // Helper sicuro per comparazione numerica data gg/mm/aaaa -> aaaaammgg
-                const toComp = (s) => {
-                    if (!s || typeof s !== 'string' || !s.includes('/')) return null;
-                    const p = s.split('/');
-                    return parseInt(p[2] + p[1].padStart(2, '0') + p[0].padStart(2, '0'));
-                };
-                const fromVal = toComp(yearFrom);
-                const toVal = toComp(yearTo);
+                const fromNum = toSortableDate(yearFrom);
+                const toNum = toSortableDate(yearTo);
 
                 let results = localDB.filter(m => {
                     const matchText = !query || 
@@ -388,9 +391,9 @@
                         (m.cast && m.cast.toLowerCase().includes(query)) || 
                         (m.director && m.director.toLowerCase().includes(query));
                     
-                    const movieDate = toComp(m.release_date);
-                    const matchDate = (!fromVal || (movieDate && movieDate >= fromVal)) && 
-                                      (!toVal || (movieDate && movieDate <= toVal));
+                    const movieDateNum = toSortableDate(m.release_date);
+                    const matchDate = (!fromNum || movieDateNum >= fromNum) && 
+                                      (!toNum || movieDateNum <= toNum);
                     const matchCountry = !country || (m.paese && m.paese.toLowerCase().includes(country));
                     
                     return matchText && matchDate && matchCountry;
@@ -450,14 +453,16 @@
 
         function renderUI() {
             const resultsContainer = document.getElementById('resultsContainer');
-            currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
+            currentMovieArray.sort((a, b) => {
+                return toSortableDate(b.release_date) - toSortableDate(a.release_date);
+            });
             
             let html = `<div class="sort-toggle"><div class="sort-btn ${currentSortMode === 'recent' ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI</div><div class="sort-btn ${currentSortMode === 'popular' ? 'active' : ''}" onclick="toggleSort('popular')">🔥 POPOLARITÀ</div></div><div class="view-toggle"><div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div><div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div></div>`;
             
             if (currentViewMode === 'grid') {
                 html += `<div class="movies-grid">`;
                 currentMovieArray.forEach(m => {
-                    const badge = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
+                    const badge = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date || 'N/D');
                     const posterUrl = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
                     html += `<div class="grid-item" onclick="openDetails(${m.id})"><div class="movie-badge">${badge}</div><img src="${posterUrl}" class="grid-poster"><div class="grid-title">${m.title}</div></div>`;
                 });
@@ -465,7 +470,7 @@
             } else {
                 html += `<div class="list-view-container">`;
                 currentMovieArray.forEach(m => { 
-                    const dataField = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
+                    const dataField = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date || 'N/D');
                     html += `<div class="list-item" onclick="openDetails(${m.id})"><div class="list-title">${m.title}</div><div class="list-data-dynamic">${dataField}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span></div></div>`; 
                 });
                 html += `</div>`;
@@ -476,9 +481,7 @@
         async function openDetails(id) {
             lastScrollPos = window.scrollY;
             let m;
-            
             const localMatch = localDB.find(x => String(x.id) === String(id));
-            
             if (localMatch) {
                 m = {
                     id: localMatch.id,
@@ -510,10 +513,8 @@
                     cast: tmdbData.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D"
                 };
             }
-
             const poster = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=No+Poster';
             const youtubeQuery = `https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}`;
-
             document.getElementById('main-db-view').style.display = 'none';
             const detailView = document.getElementById('detail-view');
             detailView.style.display = 'block';
@@ -523,14 +524,13 @@
                     <img src="${poster}" style="width:100%">
                     <div class="movie-info">
                         <h2>${m.title}</h2>
-                        <span class="data-label">Uscita Italia</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span>
+                        <span class="data-label">Uscita Italia</span><span class="data-value">${m.release_date || 'N/D'}</span>
                         <span class="data-label">Produzione</span><span class="data-value">${m.paese}</span>
                         <span class="data-label">Popolarità</span><span class="data-value">🔥 ${Math.round(m.popularity || 0)}</span>
                         <span class="data-label">Genere</span><span class="data-value">${m.genres}</span>
                         <span class="data-label">Regia</span><span class="data-value">${m.director}</span>
                         <span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span>
                         <span class="data-label">Sinossi</span><p style="font-size:0.95rem; line-height:1.5;">${m.overview || "Trama non disponibile."}</p>
-                        
                         <button class="btn-trailer" onclick="window.open('${youtubeQuery}', '_blank')">▶ GUARDA TRAILER SU YOUTUBE</button>
                         <button onclick="saveToWL('${m.id}','${m.title.replace(/'/g,"\\'")}','${poster}','${m.release_date}')" class="btn-save">💾 SALVA NEL CLOUD</button>
                     </div>
@@ -555,12 +555,10 @@
             window.scrollTo(0, 0);
         }
 
-        // --- 5. GOOGLE DRIVE SCRITTURA ---
         async function saveToWL(id, title, poster, date) {
             const strId = String(id);
-            const validatedDate = (date && date !== 'undefined') ? date : 'Data da confermare';
+            const validatedDate = date || 'Data da confermare';
             let existingIdx = currentVault.findIndex(x => String(x.id) === strId);
-            
             if(existingIdx !== -1) {
                 if(validatedDate !== 'Data da confermare') currentVault[existingIdx].date = validatedDate;
                 alert("Aggiornato nel Cloud!");
@@ -580,7 +578,7 @@
                     <img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}')">
                     <div class="wl-content" onclick="viewFromVault('${m.id}')">
                         <div class="wl-title" style="font-weight:700;">${m.title}</div>
-                        <div style="font-size:0.75rem; color:var(--gold); font-weight:700;">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div>
+                        <div style="font-size:0.75rem; color:var(--gold); font-weight:700;">📅 ${m.date || 'N/D'}</div>
                     </div>
                     <button class="btn-delete-wl" onclick="removeWL('${m.id}')">X</button>
                 </div>
