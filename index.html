@@ -111,15 +111,15 @@
             <div id="filtersPanel" class="filters-panel">
                 <div class="filter-group">
                     <label>Dal (Anno)</label>
-                    <input type="number" id="filterYearFrom" placeholder="es. 1990">
+                    <input type="number" id="filterYearFrom" placeholder="es. 1990" onkeypress="if(event.key === 'Enter') searchManual()">
                 </div>
                 <div class="filter-group">
                     <label>Al (Anno)</label>
-                    <input type="number" id="filterYearTo" placeholder="es. 2026">
+                    <input type="number" id="filterYearTo" placeholder="es. 2026" onkeypress="if(event.key === 'Enter') searchManual()">
                 </div>
                 <div class="filter-group">
                     <label>Paese</label>
-                    <input type="text" id="filterCountry" placeholder="es. Italia">
+                    <input type="text" id="filterCountry" placeholder="es. Italia" onkeypress="if(event.key === 'Enter') searchManual()">
                 </div>
             </div>
 
@@ -223,14 +223,11 @@
             const maxDateObj = new Date(maxDate);
             const today = new Date();
             
-            // CORREZIONE BUG DATE FUTURE: 
-            // Calcolo la differenza togliendo il Math.abs(). Se la data è nel futuro, il numero sarà negativo.
             const diffTime = today.getTime() - maxDateObj.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             const formattedDate = maxDate.split('-').reverse().join('/');
             
-            // SOGLIA PORTATA A 21 GIORNI (Se diffDays è <= 21, inclusi i giorni nel futuro, sarà Verde)
             if (diffDays <= 21) {
                 statusDiv.className = "db-status green";
                 statusDiv.innerHTML = `🟢 DB Allineato (${formattedDate})`;
@@ -244,7 +241,7 @@
             document.getElementById("filtersPanel").classList.toggle("active");
         }
 
-        // --- 3. MOTORE GOOGLE DRIVE CLOUD (Invariato) ---
+        // --- 3. MOTORE GOOGLE DRIVE CLOUD ---
         function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
 
         async function intializeGapiClient() {
@@ -336,14 +333,18 @@
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
             const yearTo = document.getElementById('filterYearTo').value;
-            const country = document.getElementById('filterCountry').value.toLowerCase().trim();
+            let country = document.getElementById('filterCountry').value.toLowerCase().trim();
+            
+            // Auto-traduttore per termini comuni
+            if (country === 'italy') country = 'italia';
+            if (country === 'usa' || country === 'america') country = 'stati uniti';
             
             const resultsContainer = document.getElementById('resultsContainer');
             if(!query && !yearFrom && !yearTo && !country) return;
             
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
-            // FASE 1: Ricerca Locale (Se il Caveau è pieno)
+            // FASE 1: Ricerca Locale (Caveau Pieno)
             if (localDB.length > 0) {
                 let results = localDB.filter(m => {
                     const matchText = !query || 
@@ -360,12 +361,19 @@
                 });
                 
                 if (results.length > 0) {
-                    currentMovieArray = results;
-                    renderUI();
+                    // Taglio di sicurezza per non far esplodere il browser
+                    if(results.length > 100) {
+                        currentMovieArray = results.slice(0, 100);
+                        renderUI();
+                        resultsContainer.innerHTML += `<p style="text-align:center; color:#aaa; font-size:0.8rem; margin-top:20px; padding:10px;">Mostrati 100 risultati su ${results.length} totali.<br>Usa i filtri (es. riduci gli anni) per una ricerca più specifica.</p>`;
+                    } else {
+                        currentMovieArray = results;
+                        renderUI();
+                    }
                     return;
                 }
                 
-                // Se non trova nulla localmente e ci sono filtri stretti, si ferma.
+                // Se non trova nulla con i filtri, si ferma pulito.
                 if (yearFrom || yearTo || country) {
                     currentMovieArray = [];
                     renderUI();
@@ -374,28 +382,37 @@
                 }
             }
 
-            // FASE 2: Fallback TMDB a Cascata (Se DB vuoto o query testo non trovata localmente)
+            // FASE 2: Fallback TMDB (Se DB vuoto)
             try {
-                // Tenta ricerca Film
-                const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    currentMovieArray = data.results;
-                    renderUI();
-                } else {
-                    // Tenta ricerca Attore (Cross-field online)
-                    const pRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                    const pData = await pRes.json();
-                    if (pData.results && pData.results.length > 0) {
-                        const mRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${pData.results[0].id}&sort_by=release_date.desc`);
-                        const mData = await mRes.json();
-                        currentMovieArray = mData.results || [];
+                if (query) {
+                    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    if (data.results && data.results.length > 0) {
+                        currentMovieArray = data.results;
                         renderUI();
                     } else {
-                        currentMovieArray = [];
-                        renderUI();
-                        resultsContainer.innerHTML = '<p style="text-align:center; color:#fff;">Nessun risultato trovato neanche online.</p>';
+                        const pRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
+                        const pData = await pRes.json();
+                        if (pData.results && pData.results.length > 0) {
+                            const mRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${pData.results[0].id}&sort_by=release_date.desc`);
+                            const mData = await mRes.json();
+                            currentMovieArray = mData.results || [];
+                            renderUI();
+                        } else {
+                            currentMovieArray = [];
+                            renderUI();
+                            resultsContainer.innerHTML = '<p style="text-align:center; color:#fff;">Nessun risultato trovato neanche online.</p>';
+                        }
                     }
+                } else {
+                    // Se non c'è testo ma ci sono i filtri (DB assente)
+                    let discoverUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
+                    if (yearFrom) discoverUrl += `&primary_release_date.gte=${yearFrom}-01-01`;
+                    if (yearTo) discoverUrl += `&primary_release_date.lte=${yearTo}-12-31`;
+                    const res = await fetch(discoverUrl);
+                    const data = await res.json();
+                    currentMovieArray = data.results || [];
+                    renderUI();
                 }
             } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete TMDB.</p>'; }
         }
@@ -410,8 +427,7 @@
                 html += `<div class="movies-grid">`;
                 currentMovieArray.forEach(m => {
                     const badge = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
-                    // Gestione locandine anche per risultati diretti da DB locale
-                    const posterUrl = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450';
+                    const posterUrl = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
                     html += `<div class="grid-item" onclick="openDetails(${m.id})"><div class="movie-badge">${badge}</div><img src="${posterUrl}" class="grid-poster"><div class="grid-title">${m.title}</div></div>`;
                 });
                 html += `</div>`;
@@ -430,7 +446,6 @@
             lastScrollPos = window.scrollY;
             let m;
             
-            // Cerca prima nel Caveau Locale, operazione a costo zero
             const localMatch = localDB.find(x => String(x.id) === String(id));
             
             if (localMatch) {
@@ -447,11 +462,10 @@
                     cast: localMatch.cast || "N/D"
                 };
             } else {
-                // Se non c'è, scarica la scheda da TMDB
                 document.getElementById('resultsContainer').innerHTML = '<p style="text-align:center; color:#f5c518;">Recupero dettagli online...</p>';
                 const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`);
                 const tmdbData = await res.json();
-                renderUI(); // Ripristina la view dietro
+                renderUI(); 
                 m = {
                     id: tmdbData.id,
                     title: tmdbData.title,
