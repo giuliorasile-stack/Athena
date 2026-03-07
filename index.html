@@ -48,7 +48,6 @@
         .filter-group input { padding: 8px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 0.8rem; }
 
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
-        .btn-dump { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--red); background: rgba(231,76,60,0.1); color: var(--red); font-weight: 800; font-size: 0.7rem; margin-bottom: 15px; display: none; cursor: pointer; }
         
         .sort-toggle, .view-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
         .sort-btn, .view-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
@@ -125,7 +124,6 @@
             </div>
 
             <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (400 TITOLI - 180GG)</button>
-            <button id="dumpBtn" class="btn-dump" onclick="downloadDump()">📂 ESPORTA DUMP API (.TXT)</button>
             <div id="resultsContainer"></div>
         </div>
         <div id="detail-view" style="display:none;"></div>
@@ -224,10 +222,16 @@
             
             const maxDateObj = new Date(maxDate);
             const today = new Date();
-            const diffDays = Math.ceil(Math.abs(today - maxDateObj) / (1000 * 60 * 60 * 24));
+            
+            // CORREZIONE BUG DATE FUTURE: 
+            // Calcolo la differenza togliendo il Math.abs(). Se la data è nel futuro, il numero sarà negativo.
+            const diffTime = today.getTime() - maxDateObj.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             const formattedDate = maxDate.split('-').reverse().join('/');
-            if (diffDays <= 15) {
+            
+            // SOGLIA PORTATA A 21 GIORNI (Se diffDays è <= 21, inclusi i giorni nel futuro, sarà Verde)
+            if (diffDays <= 21) {
                 statusDiv.className = "db-status green";
                 statusDiv.innerHTML = `🟢 DB Allineato (${formattedDate})`;
             } else {
@@ -324,7 +328,6 @@
                 combined = combined.filter(m => m.release_date && new Date(m.release_date) >= cutoffDate);
                 
                 currentMovieArray = Array.from(new Map(combined.map(m => [m.id, m])).values());
-                document.getElementById('dumpBtn').style.display = 'block';
                 renderUI();
             } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
         }
@@ -552,10 +555,6 @@
 
         function toggleSort(m) { currentSortMode = m; renderUI(); }
         function toggleView(m) { currentViewMode = m; renderUI(); }
-        function downloadDump() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentMovieArray, null, 4));
-            const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "athena_dump.txt"); dl.click();
-        }
     </script>
 </body>
 </html>
