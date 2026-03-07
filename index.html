@@ -224,7 +224,6 @@
             
             const maxDateObj = new Date(maxDate);
             const today = new Date();
-            
             const diffTime = today.getTime() - maxDateObj.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
@@ -351,8 +350,7 @@
             const yearTo = document.getElementById('filterYearTo').value.trim();
             let country = document.getElementById('filterCountry').value.toLowerCase().trim();
             
-            if (country === 'italy') country = 'italia';
-            if (country === 'usa' || country === 'america') country = 'stati uniti';
+            // ELIMINATA LA TRADUZIONE ERRATA "italy" -> "italia"
             
             const resultsContainer = document.getElementById('resultsContainer');
             if(!query && !yearFrom && !yearTo && !country) return;
@@ -360,7 +358,6 @@
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
             if (localDB.length > 0) {
-                // INTERPRETE CHIRURGICO: Traduce gg/mm/aaaa (input) o aaaa-mm-gg (JSON) in Numero AAAAmmgg
                 const toNum = (s) => {
                     if (!s || typeof s !== 'string') return null;
                     if (s.includes('/')) {
