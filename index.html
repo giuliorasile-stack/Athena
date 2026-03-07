@@ -15,7 +15,6 @@
         :root { --bg-dark: #0f0f0f; --gold: #f5c518; --red: #e74c3c; --green: #2ecc71; --text-light: #fff; --text-muted: #bbb; --card-bg: rgba(255, 255, 255, 0.05); }
         body { background-color: var(--bg-dark); color: var(--text-light); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 40px; -webkit-font-smoothing: antialiased; }
         
-        /* Overlay Google Login */
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .sync-status { font-size: 0.65rem; color: var(--gold); padding: 5px; background: #000; text-align: center; border-bottom: 1px solid #333; }
 
@@ -23,7 +22,6 @@
         .header-title { padding: 15px 20px 10px; display: flex; justify-content: space-between; align-items: center; }
         .header-title h1 { color: var(--gold); font-size: 1.5rem; font-weight: 900; margin: 0; font-family: 'Montserrat'; }
         
-        /* Semaforo Database */
         .db-status { font-size: 0.65rem; padding: 5px 10px; border-radius: 12px; background: #222; font-weight: 800; cursor: pointer; border: 1px solid #444; text-transform: uppercase; }
         .db-status.green { border-color: var(--green); color: var(--green); }
         .db-status.red { border-color: var(--red); color: var(--red); }
@@ -35,7 +33,6 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* Omnibar & Filtri */
         .search-container { display: flex; gap: 8px; margin-bottom: 10px; }
         .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; }
         .btn-filter { background: #333; border: none; padding: 0 15px; border-radius: 10px; font-size: 1.2rem; cursor: pointer; color: white; }
@@ -46,6 +43,9 @@
         .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 80px; }
         .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
         .filter-group input { padding: 8px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 0.8rem; }
+        
+        /* Stile personalizzato per i datalist su alcuni browser */
+        input::-webkit-calendar-picker-indicator { opacity: 0.5; filter: invert(1); cursor: pointer; }
 
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
         
@@ -119,7 +119,8 @@
                 </div>
                 <div class="filter-group">
                     <label>Paese</label>
-                    <input type="text" id="filterCountry" placeholder="es. Italia" onkeypress="if(event.key === 'Enter') searchManual()">
+                    <input type="text" id="filterCountry" list="countryList" placeholder="Es. digita le prime lettere..." onkeypress="if(event.key === 'Enter') searchManual()">
+                    <datalist id="countryList"></datalist>
                 </div>
             </div>
 
@@ -176,6 +177,7 @@
                     if (ev.target.result) {
                         localDB = ev.target.result.data;
                         updateDbStatus();
+                        populateCountryDropdown(); // Inizializza la tendina dinamica
                     }
                 };
             };
@@ -197,6 +199,7 @@
                         store.put({ id: "master_db", data: localDB });
                         tx.oncomplete = () => {
                             updateDbStatus();
+                            populateCountryDropdown(); // Aggiorna la tendina al nuovo caricamento
                             alert("✅ Database memorizzato permanentemente nel Caveau del browser!");
                         };
                     };
@@ -235,6 +238,32 @@
                 statusDiv.className = "db-status red";
                 statusDiv.innerHTML = `🔴 Aggiorna DB (${formattedDate})`;
             }
+        }
+
+        // MOTORE DI POPOLAMENTO AUTOMATICO TENDINA NAZIONI
+        function populateCountryDropdown() {
+            if (localDB.length === 0) return;
+            const countrySet = new Set();
+            
+            localDB.forEach(m => {
+                if (m.paese && m.paese !== "N/D") {
+                    // Divide "Italia, Francia" in singole nazioni pulite
+                    m.paese.split(',').forEach(c => {
+                        const trimmed = c.trim();
+                        if (trimmed) countrySet.add(trimmed);
+                    });
+                }
+            });
+
+            const dataList = document.getElementById('countryList');
+            dataList.innerHTML = ''; // Svuota la vecchia lista
+            
+            // Ordina alfabeticamente e inietta
+            Array.from(countrySet).sort().forEach(c => {
+                const option = document.createElement('option');
+                option.value = c;
+                dataList.appendChild(option);
+            });
         }
 
         function toggleFilters() {
@@ -335,7 +364,6 @@
             const yearTo = document.getElementById('filterYearTo').value;
             let country = document.getElementById('filterCountry').value.toLowerCase().trim();
             
-            // Auto-traduttore per termini comuni
             if (country === 'italy') country = 'italia';
             if (country === 'usa' || country === 'america') country = 'stati uniti';
             
@@ -344,7 +372,7 @@
             
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
-            // FASE 1: Ricerca Locale (Caveau Pieno)
+            // FASE 1: Ricerca Locale
             if (localDB.length > 0) {
                 let results = localDB.filter(m => {
                     const matchText = !query || 
@@ -361,11 +389,10 @@
                 });
                 
                 if (results.length > 0) {
-                    // Taglio di sicurezza per non far esplodere il browser
                     if(results.length > 100) {
                         currentMovieArray = results.slice(0, 100);
                         renderUI();
-                        resultsContainer.innerHTML += `<p style="text-align:center; color:#aaa; font-size:0.8rem; margin-top:20px; padding:10px;">Mostrati 100 risultati su ${results.length} totali.<br>Usa i filtri (es. riduci gli anni) per una ricerca più specifica.</p>`;
+                        resultsContainer.innerHTML += `<p style="text-align:center; color:#aaa; font-size:0.8rem; margin-top:20px; padding:10px;">Mostrati 100 risultati su ${results.length} totali.<br>Usa i filtri per una ricerca più specifica.</p>`;
                     } else {
                         currentMovieArray = results;
                         renderUI();
@@ -373,7 +400,6 @@
                     return;
                 }
                 
-                // Se non trova nulla con i filtri, si ferma pulito.
                 if (yearFrom || yearTo || country) {
                     currentMovieArray = [];
                     renderUI();
@@ -382,7 +408,7 @@
                 }
             }
 
-            // FASE 2: Fallback TMDB (Se DB vuoto)
+            // FASE 2: Fallback TMDB
             try {
                 if (query) {
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
@@ -405,7 +431,6 @@
                         }
                     }
                 } else {
-                    // Se non c'è testo ma ci sono i filtri (DB assente)
                     let discoverUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
                     if (yearFrom) discoverUrl += `&primary_release_date.gte=${yearFrom}-01-01`;
                     if (yearTo) discoverUrl += `&primary_release_date.lte=${yearTo}-12-31`;
