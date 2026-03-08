@@ -54,6 +54,9 @@
             padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; 
             font-size: 16px; /* Evita zoom Safari */
             min-height: 44px;
+            -webkit-appearance: none; /* Sblocca la tendina nativa su iOS */
+            appearance: none; /* Standard moderno */
+            cursor: pointer;
         }
 
         /* COMPONENTI UI RIMASTI COPIA CARBONE */
@@ -307,15 +310,13 @@
                 if (res.length > 0) { currentMovieArray = res.slice(0, 100); renderUI(); return; }
             }
 
-            // LOGICA TMDB BIMODALE (VARIAZIONE PER iOS)
+            // LOGICA TMDB BIMODALE CON RETE A STRASCICO
             try {
                 let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
                 
                 if (isIOS && yearFrom && yearFrom === yearTo) {
-                    // BLINDATURA iOS: Anno atomico se gli anni coincidono
                     discUrl += `&primary_release_year=${parseInt(yearFrom)}`;
                 } else {
-                    // BLINDATURA PC: Range completo originale
                     if (yearFrom) discUrl += `&primary_release_date.gte=${parseInt(yearFrom)}-01-01`;
                     if (yearTo) discUrl += `&primary_release_date.lte=${parseInt(yearTo)}-12-31`;
                 }
@@ -327,11 +328,17 @@
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                     results = ((await res.json()).results || []).filter(m => validateMovie(m));
                 } else {
-                    results = (await (await fetch(discUrl)).json()).results || [];
+                    const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
+                    const datasets = await Promise.all(responses.map(r => r.json()));
+                    let combined = [];
+                    datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
+                    results = Array.from(new Map(combined.map(m => [m.id, m])).values());
                 }
                 currentMovieArray = results;
                 renderUI();
-            } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete.</p>'; }
+            } catch (e) { 
+                rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete o timeout.</p>'; 
+            }
         }
 
         function renderUI() {
