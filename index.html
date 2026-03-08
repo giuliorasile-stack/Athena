@@ -54,9 +54,15 @@
             padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; 
             font-size: 16px; /* Evita zoom Safari */
             min-height: 44px;
-            -webkit-appearance: none; /* Sblocca la tendina nativa su iOS */
-            appearance: none; /* Standard moderno */
-            cursor: pointer;
+        }
+
+        /* OPZIONE A FORZATA: Stile crudo nativo per iOS per sbloccare il selettore */
+        @supports (-webkit-touch-callout: none) {
+            .filter-group select {
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-appearance: menulist !important;
+            }
         }
 
         /* COMPONENTI UI RIMASTI COPIA CARBONE */
@@ -282,7 +288,7 @@
             } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
         }
 
-        // --- RICERCA MANUALE BIMODALE VALIDATA (VARIAZIONE CHIRURGICA) ---
+        // --- RICERCA MANUALE BIMODALE UNIFICATA CON RETE A STRASCICO ---
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
@@ -310,16 +316,12 @@
                 if (res.length > 0) { currentMovieArray = res.slice(0, 100); renderUI(); return; }
             }
 
-            // LOGICA TMDB BIMODALE CON RETE A STRASCICO
+            // LOGICA TMDB UNIFICATA CON RETE A STRASCICO E DATE NATIVE
             try {
                 let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
                 
-                if (isIOS && yearFrom && yearFrom === yearTo) {
-                    discUrl += `&primary_release_year=${parseInt(yearFrom)}`;
-                } else {
-                    if (yearFrom) discUrl += `&primary_release_date.gte=${parseInt(yearFrom)}-01-01`;
-                    if (yearTo) discUrl += `&primary_release_date.lte=${parseInt(yearTo)}-12-31`;
-                }
+                if (yearFrom) discUrl += `&release_date.gte=${parseInt(yearFrom)}-01-01`;
+                if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
 
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
