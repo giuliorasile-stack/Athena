@@ -52,11 +52,10 @@
         
         .filter-group input, .filter-group select { 
             padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; 
-            font-size: 16px; /* Evita zoom Safari */
+            font-size: 16px; 
             min-height: 44px;
         }
 
-        /* OPZIONE B: RICALCOLO FORZATO E ACCELERAZIONE HARDWARE PER iOS */
         .filter-group select {
             -webkit-appearance: none;
             appearance: none;
@@ -72,7 +71,6 @@
             padding-right: 30px;
         }
 
-        /* COMPONENTI UI RIMASTI COPIA CARBONE */
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
         .sort-toggle, .view-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
         .sort-btn, .view-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
@@ -178,7 +176,6 @@
         let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
         let lastScrollPos = 0, localDB = [];
 
-        // SENSORE HARDWARE PER BIMODALITÀ
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
         const COUNTRY_ISO_MAP = {
@@ -192,7 +189,13 @@
                 const tx = db.transaction("json_store", "readonly");
                 const store = tx.objectStore("json_store");
                 const getReq = store.get("master_db");
-                getReq.onsuccess = (ev) => { if (ev.target.result) { localDB = ev.target.result.data; updateDbStatus(); populateCountryDropdown(); } };
+                getReq.onsuccess = (ev) => { 
+                    if (ev.target.result) { 
+                        localDB = ev.target.result.data; 
+                        updateDbStatus(); 
+                    }
+                    populateCountryDropdown(); 
+                };
             };
         }
         initLocalDB();
@@ -231,7 +234,6 @@
             const select = document.getElementById('filterCountry');
             select.innerHTML = '<option value="">Tutte le nazioni</option>';
 
-            // PIANO B: iOS / Modalità TMDB (Database Assente)
             if (localDB.length === 0) {
                 const topCountries = [
                     "United States of America", "Italy", "France", "United Kingdom", 
@@ -245,10 +247,9 @@
                     opt.textContent = c; 
                     select.appendChild(opt); 
                 });
-                return; // Esce dalla funzione senza processare il DB vuoto
+                return; 
             }
 
-            // PIANO A: PC / Modalità Caveau (Database Caricato)
             const countrySet = new Set();
             localDB.forEach(m => { 
                 if (m.paese && m.paese !== "N/D") { 
@@ -326,7 +327,6 @@
             } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
         }
 
-        // --- MOTORE DEFINITIVO: ASSENZA DI LIMITI (CAVEAU) + SUPER-CASCATA (TMDB) ---
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
@@ -341,58 +341,60 @@
                 if ((yearFrom || yearTo) && releaseYear === 0) return false;
                 const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                 const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
-                const matchCountry = !country || (m.paese && m.paese.includes(country));
+                
+                let matchCountry = false;
+                if (!country) {
+                    matchCountry = true;
+                } else if (m.paese && m.paese !== "N/D") {
+                    const paesiArray = m.paese.split(',').map(c => c.trim());
+                    matchCountry = paesiArray.includes(country);
+                } else if (m.origin_country && COUNTRY_ISO_MAP[country]) {
+                    matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]);
+                }
+
                 return matchYearFrom && matchYearTo && matchCountry;
             };
 
-            // LOGICA CAVEAU: Ghigliottina (.slice) rimossa. Estrazione 100% totale.
             if (localDB.length > 0) {
                 let res = localDB.filter(m => {
                     const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
                     return matchText && validateMovie(m);
                 });
                 if (res.length > 0) { 
-                    currentMovieArray = res; // Niente più .slice(0, 100)!
+                    currentMovieArray = res;
                     renderUI(); 
                     return; 
                 }
             }
 
-            // LOGICA TMDB: Super-Cascata Inclusiva
             try {
                 let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
                 if (yearFrom) discUrl += `&release_date.gte=${parseInt(yearFrom)}-01-01`;
                 if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
-                let risultati_totali = new Map(); // Uso la Map per evitare duplicati via ID
+                let risultati_totali = new Map(); 
 
                 if (query) {
-                    // FASE 1: Cassetto Titoli
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
                     (data_movie.results || []).forEach(m => risultati_totali.set(m.id, m));
 
-                    // FASE 2: Cassetto Persone
                     const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                     const data_person = await res_person.json();
                     const persone = data_person.results || [];
 
                     if (persone.length > 0) {
                         const person_id = persone[0].id;
-                        
-                        // FASE 3: Rete a Strascico per Filmografia Completa (Max 20 Pagine)
                         let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${person_id}&sort_by=release_date.desc`;
                         
-                        // Chiamata Pagina 1 e lettura Pagine Totali
                         const res_p1 = await fetch(url_discover_base + "&page=1");
                         const data_p1 = await res_p1.json();
                         (data_p1.results || []).forEach(m => risultati_totali.set(m.id, m));
                         
                         const tot_pages = data_p1.total_pages || 1;
-                        const tot_pages_fetch = Math.min(tot_pages, 20); // Limite di sicurezza server
+                        const tot_pages_fetch = Math.min(tot_pages, 20); 
                         
-                        // Chiamate parallele per le restanti pagine
                         if (tot_pages_fetch > 1) {
                             const pagePromises = [];
                             for (let p = 2; p <= tot_pages_fetch; p++) {
@@ -405,16 +407,11 @@
                         }
                     }
                     
-                    // Unione, Validazione Filtri (Anno/Paese) e Conversione Finale
                     let final_results = Array.from(risultati_totali.values());
-                    
-                    // Poiché search/movie e search/person non accettano i parametri .gte e .lte in TMDB, 
-                    // li filtriamo localmente tramite la funzione validateMovie
                     final_results = final_results.filter(m => validateMovie(m));
                     currentMovieArray = final_results;
 
                 } else {
-                    // Nessun Testo (Solo Filtri Anno/Paese): Rete a Strascico pura su Discover
                     const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
                     const datasets = await Promise.all(responses.map(r => r.json()));
                     let combined = [];
@@ -433,7 +430,6 @@
             container.innerHTML = '';
             currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
             
-            // Messaggio riassuntivo del numero di risultati estratti
             const countMsg = document.createElement('div');
             countMsg.style = "text-align:center; color:#aaa; font-size:0.75rem; margin-bottom:10px;";
             countMsg.textContent = `Risultati estratti: ${currentMovieArray.length}`;
