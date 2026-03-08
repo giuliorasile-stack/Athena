@@ -63,9 +63,8 @@
             cursor: pointer;
             position: relative;
             z-index: 10000;
-            -webkit-transform: translateZ(0); /* Sblocca il layer grafico */
+            -webkit-transform: translateZ(0);
             pointer-events: auto !important;
-            /* Freccia custom per sostituire quella nativa nascosta da appearance:none */
             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23f5c518%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
             background-repeat: no-repeat;
             background-position: right 10px top 50%;
@@ -297,7 +296,7 @@
             } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
         }
 
-        // --- RICERCA MANUALE BIMODALE UNIFICATA CON RETE A STRASCICO E DATE NATIVE ---
+        // --- MOTORE DEFINITIVO: ASSENZA DI LIMITI (CAVEAU) + SUPER-CASCATA (TMDB) ---
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
@@ -305,7 +304,7 @@
             const country = document.getElementById('filterCountry').value;
             const rc = document.getElementById('resultsContainer');
             if(!query && !yearFrom && !yearTo && !country) return;
-            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca...</p>';
+            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso (potrebbe richiedere qualche istante)...</p>';
             
             const validateMovie = (m) => {
                 const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
@@ -316,39 +315,86 @@
                 return matchYearFrom && matchYearTo && matchCountry;
             };
 
-            // LOGICA CAVEAU (SOLO PC)
+            // LOGICA CAVEAU: Ghigliottina (.slice) rimossa. Estrazione 100% totale.
             if (localDB.length > 0) {
                 let res = localDB.filter(m => {
                     const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
                     return matchText && validateMovie(m);
                 });
-                if (res.length > 0) { currentMovieArray = res.slice(0, 100); renderUI(); return; }
+                if (res.length > 0) { 
+                    currentMovieArray = res; // Niente più .slice(0, 100)!
+                    renderUI(); 
+                    return; 
+                }
             }
 
-            // LOGICA TMDB UNIFICATA CON RETE A STRASCICO
+            // LOGICA TMDB: Super-Cascata Inclusiva
             try {
                 let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
-                
                 if (yearFrom) discUrl += `&release_date.gte=${parseInt(yearFrom)}-01-01`;
                 if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
-
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
-                let results = [];
+                let risultati_totali = new Map(); // Uso la Map per evitare duplicati via ID
+
                 if (query) {
-                    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                    results = ((await res.json()).results || []).filter(m => validateMovie(m));
+                    // FASE 1: Cassetto Titoli
+                    const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
+                    const data_movie = await res_movie.json();
+                    (data_movie.results || []).forEach(m => risultati_totali.set(m.id, m));
+
+                    // FASE 2: Cassetto Persone
+                    const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
+                    const data_person = await res_person.json();
+                    const persone = data_person.results || [];
+
+                    if (persone.length > 0) {
+                        const person_id = persone[0].id;
+                        
+                        // FASE 3: Rete a Strascico per Filmografia Completa (Max 20 Pagine)
+                        let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${person_id}&sort_by=release_date.desc`;
+                        
+                        // Chiamata Pagina 1 e lettura Pagine Totali
+                        const res_p1 = await fetch(url_discover_base + "&page=1");
+                        const data_p1 = await res_p1.json();
+                        (data_p1.results || []).forEach(m => risultati_totali.set(m.id, m));
+                        
+                        const tot_pages = data_p1.total_pages || 1;
+                        const tot_pages_fetch = Math.min(tot_pages, 20); // Limite di sicurezza server
+                        
+                        // Chiamate parallele per le restanti pagine
+                        if (tot_pages_fetch > 1) {
+                            const pagePromises = [];
+                            for (let p = 2; p <= tot_pages_fetch; p++) {
+                                pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json()));
+                            }
+                            const pagesData = await Promise.all(pagePromises);
+                            pagesData.forEach(pd => {
+                                (pd.results || []).forEach(m => risultati_totali.set(m.id, m));
+                            });
+                        }
+                    }
+                    
+                    // Unione, Validazione Filtri (Anno/Paese) e Conversione Finale
+                    let final_results = Array.from(risultati_totali.values());
+                    
+                    // Poiché search/movie e search/person non accettano i parametri .gte e .lte in TMDB, 
+                    // li filtriamo localmente tramite la funzione validateMovie
+                    final_results = final_results.filter(m => validateMovie(m));
+                    currentMovieArray = final_results;
+
                 } else {
+                    // Nessun Testo (Solo Filtri Anno/Paese): Rete a Strascico pura su Discover
                     const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
                     const datasets = await Promise.all(responses.map(r => r.json()));
                     let combined = [];
                     datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
-                    results = Array.from(new Map(combined.map(m => [m.id, m])).values());
+                    currentMovieArray = Array.from(new Map(combined.map(m => [m.id, m])).values());
                 }
-                currentMovieArray = results;
+                
                 renderUI();
             } catch (e) { 
-                rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete o timeout.</p>'; 
+                rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete o timeout TMDB.</p>'; 
             }
         }
 
@@ -356,6 +402,13 @@
             const container = document.getElementById('resultsContainer');
             container.innerHTML = '';
             currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
+            
+            // Messaggio riassuntivo del numero di risultati estratti
+            const countMsg = document.createElement('div');
+            countMsg.style = "text-align:center; color:#aaa; font-size:0.75rem; margin-bottom:10px;";
+            countMsg.textContent = `Risultati estratti: ${currentMovieArray.length}`;
+            container.appendChild(countMsg);
+
             const frag = document.createDocumentFragment();
             const ctrl = document.createElement('div');
             ctrl.innerHTML = `<div class="sort-toggle"><div class="sort-btn ${currentSortMode === 'recent' ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI</div><div class="sort-btn ${currentSortMode === 'popular' ? 'active' : ''}" onclick="toggleSort('popular')">🔥 POPOLARITÀ</div></div><div class="view-toggle"><div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div><div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div></div>`;
@@ -395,7 +448,6 @@
             const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; b.onclick = () => { dv.style.display = 'none'; document.getElementById('main-db-view').style.display = 'block'; setTimeout(() => window.scrollTo(0, lastScrollPos), 10); };
             const c = document.createElement('div'); c.className = 'movie-card';
             
-            // AGGIUNTO IL RIPRISTINO DEL CAST NELLA SCHEDA FILM
             c.innerHTML = `<img src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, post, m.release_date);
