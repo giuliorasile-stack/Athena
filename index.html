@@ -26,15 +26,24 @@
         .tab-content { display: none; padding: 20px; animation: fadeIn 0.2s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .search-container { display: flex; gap: 8px; margin-bottom: 10px; }
-        .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; }
-        .btn-filter { background: #333; border: none; padding: 0 15px; border-radius: 10px; font-size: 1.2rem; cursor: pointer; color: white; }
-        .btn-search { background: var(--gold); border: none; padding: 0 20px; border-radius: 10px; font-weight: 900; cursor: pointer; color: #000; }
+        
+        .search-container { display: flex; gap: 5px; margin-bottom: 10px; align-items: stretch; }
+        .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; min-width: 0; }
+        .btn-filter { background: #333; border: none; padding: 0 10px; border-radius: 10px; font-size: 1rem; cursor: pointer; color: white; }
+        .btn-search { background: var(--gold); border: none; padding: 0 15px; border-radius: 10px; font-weight: 900; cursor: pointer; color: #000; font-size: 0.8rem; }
+        .btn-reset { background: #444; border: none; padding: 0 12px; border-radius: 10px; color: white; cursor: pointer; font-size: 0.9rem; }
+
         .filters-panel { display: none; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
         .filters-panel.active { display: flex; gap: 10px; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 80px; }
         .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
-        .filter-group input, .filter-group select { padding: 8px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 0.8rem; appearance: none; }
+        
+        /* FIX iOS: Font 16px evita lo zoom automatico, rimosso appearance:none per abilitare menu nativo */
+        .filter-group input, .filter-group select { 
+            padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; 
+            font-size: 16px; min-height: 44px;
+        }
+
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
         .sort-toggle, .view-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
         .sort-btn, .view-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
@@ -85,23 +94,24 @@
     <div id="tab-database" class="tab-content active">
         <div id="main-db-view">
             <div class="search-container">
-                <input type="text" id="manualSearch" class="search-input" placeholder="Cerca titolo, regista o attore..." onkeypress="if(event.key === 'Enter') searchManual()">
+                <input type="text" id="manualSearch" class="search-input" placeholder="Titolo, regista, attore..." onkeypress="if(event.key === 'Enter') searchManual()">
                 <button class="btn-filter" onclick="toggleFilters()">⚙️</button>
                 <button class="btn-search" onclick="searchManual()">GO</button>
+                <button class="btn-reset" onclick="resetFilters()">❌</button>
             </div>
             
             <div id="filtersPanel" class="filters-panel">
                 <div class="filter-group">
                     <label>Dal (Anno)</label>
-                    <input type="number" id="filterYearFrom" placeholder="es. 1990" onkeypress="if(event.key === 'Enter') searchManual()">
+                    <input type="number" id="filterYearFrom" placeholder="es. 1990">
                 </div>
                 <div class="filter-group">
                     <label>Al (Anno)</label>
-                    <input type="number" id="filterYearTo" placeholder="es. 2026" onkeypress="if(event.key === 'Enter') searchManual()">
+                    <input type="number" id="filterYearTo" placeholder="es. 2026">
                 </div>
                 <div class="filter-group">
                     <label>Paese</label>
-                    <select id="filterCountry" onchange="searchManual()">
+                    <select id="filterCountry">
                         <option value="">Tutte le nazioni</option>
                     </select>
                 </div>
@@ -196,6 +206,16 @@
 
         function toggleFilters() { document.getElementById("filtersPanel").classList.toggle("active"); }
 
+        function resetFilters() {
+            document.getElementById('manualSearch').value = '';
+            document.getElementById('filterYearFrom').value = '';
+            document.getElementById('filterYearTo').value = '';
+            document.getElementById('filterCountry').selectedIndex = 0;
+            currentMovieArray = [];
+            document.getElementById('resultsContainer').innerHTML = '';
+            if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters();
+        }
+
         function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
         async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
         window.onload = () => { gapi.load('client', intializeGapiClient); };
@@ -247,7 +267,6 @@
             } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
         }
 
-        // --- RICERCA MANUALE CON FILTRI VINCOLANTI ---
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
@@ -257,13 +276,11 @@
             if(!query && !yearFrom && !yearTo && !country) return;
             resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
             
-            // Logica di validazione comune (Onesta)
             const validateMovie = (m) => {
                 const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
                 if ((yearFrom || yearTo) && releaseYear === 0) return false;
                 const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                 const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
-                // Per TMDB la nazione viene filtrata via API o via stringa paese locale
                 const matchCountry = !country || (m.paese && m.paese.includes(country));
                 return matchYearFrom && matchYearTo && matchCountry;
             };
@@ -278,15 +295,15 @@
 
             try {
                 let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
-                if (yearFrom) discUrl += `&primary_release_date.gte=${yearFrom}-01-01`;
-                if (yearTo) discUrl += `&primary_release_date.lte=${yearTo}-12-31`;
+                // FIX LOGICA IPHONE: Forzatura esplicita date solari
+                if (yearFrom) discUrl += `&primary_release_date.gte=${parseInt(yearFrom)}-01-01`;
+                if (yearTo) discUrl += `&primary_release_date.lte=${parseInt(yearTo)}-12-31`;
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
                 let results = [];
                 if (query) {
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                     const data = await res.json();
-                    // BLINDATURA: Filtro vincolante sui risultati testuali di TMDB
                     results = (data.results || []).filter(m => validateMovie(m));
                 } else {
                     const res = await fetch(discUrl);
