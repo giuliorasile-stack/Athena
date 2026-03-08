@@ -228,12 +228,42 @@
         }
 
         function populateCountryDropdown() {
-            if (localDB.length === 0) return;
-            const countrySet = new Set();
-            localDB.forEach(m => { if (m.paese && m.paese !== "N/D") { m.paese.split(',').forEach(c => { const t = c.trim(); if (t) countrySet.add(t); }); } });
             const select = document.getElementById('filterCountry');
             select.innerHTML = '<option value="">Tutte le nazioni</option>';
-            Array.from(countrySet).sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; select.appendChild(opt); });
+
+            // PIANO B: iOS / Modalità TMDB (Database Assente)
+            if (localDB.length === 0) {
+                const topCountries = [
+                    "United States of America", "Italy", "France", "United Kingdom", 
+                    "Japan", "South Korea", "Germany", "Spain", "Canada", 
+                    "Australia", "China", "India", "Brazil", "Mexico", 
+                    "Argentina", "Sweden", "Denmark", "Russia", "Hong Kong", "Ireland"
+                ];
+                topCountries.sort().forEach(c => { 
+                    const opt = document.createElement('option'); 
+                    opt.value = c; 
+                    opt.textContent = c; 
+                    select.appendChild(opt); 
+                });
+                return; // Esce dalla funzione senza processare il DB vuoto
+            }
+
+            // PIANO A: PC / Modalità Caveau (Database Caricato)
+            const countrySet = new Set();
+            localDB.forEach(m => { 
+                if (m.paese && m.paese !== "N/D") { 
+                    m.paese.split(',').forEach(c => { 
+                        const t = c.trim(); 
+                        if (t) countrySet.add(t); 
+                    }); 
+                } 
+            });
+            Array.from(countrySet).sort().forEach(c => { 
+                const opt = document.createElement('option'); 
+                opt.value = c; 
+                opt.textContent = c; 
+                select.appendChild(opt); 
+            });
         }
 
         function toggleFilters() { document.getElementById("filtersPanel").classList.toggle("active"); }
