@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.0 Ibrida</title>
+    <title>Athena Lab V9.2 Ibrida</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -14,36 +14,49 @@
         body { background-color: var(--bg-dark); color: var(--text-light); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 40px; -webkit-font-smoothing: antialiased; }
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .sync-status { font-size: 0.65rem; color: var(--gold); padding: 5px; background: #000; text-align: center; border-bottom: 1px solid #333; }
+        
+        /* HEADER E LIVELLI STACKING */
         .sticky-header { position: sticky; top: 0; z-index: 1000; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid var(--gold); }
         .header-title { padding: 15px 20px 10px; display: flex; justify-content: space-between; align-items: center; }
         .header-title h1 { color: var(--gold); font-size: 1.5rem; font-weight: 900; margin: 0; font-family: 'Montserrat'; }
         .db-status { font-size: 0.65rem; padding: 5px 10px; border-radius: 12px; background: #222; font-weight: 800; cursor: pointer; border: 1px solid #444; text-transform: uppercase; }
         .db-status.green { border-color: var(--green); color: var(--green); }
         .db-status.red { border-color: var(--red); color: var(--red); }
+        
         .top-nav { display: flex; justify-content: space-around; padding: 10px 0; }
         .nav-item { color: #fff; text-align: center; font-family: 'Montserrat'; font-size: 0.85rem; font-weight: 900; flex: 1; cursor: pointer; padding: 5px 0; }
         .nav-item.active { color: var(--gold); }
+
+        /* TAB CONTENUTI */
         .tab-content { display: none; padding: 20px; animation: fadeIn 0.2s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
+        /* SEARCH BAR BILANCIATA */
         .search-container { display: flex; gap: 5px; margin-bottom: 10px; align-items: stretch; }
         .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; min-width: 0; }
         .btn-filter { background: #333; border: none; padding: 0 10px; border-radius: 10px; font-size: 1rem; cursor: pointer; color: white; }
         .btn-search { background: var(--gold); border: none; padding: 0 15px; border-radius: 10px; font-weight: 900; cursor: pointer; color: #000; font-size: 0.8rem; }
         .btn-reset { background: #444; border: none; padding: 0 12px; border-radius: 10px; color: white; cursor: pointer; font-size: 0.9rem; }
 
-        .filters-panel { display: none; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
+        /* PANNELLO FILTRI SBLOCCATO PER iOS */
+        .filters-panel { 
+            display: none; background: #161616; padding: 15px; border-radius: 10px; 
+            margin-bottom: 15px; border: 1px solid #333; 
+            position: relative; z-index: 9999; /* Sopra la testata sticky */
+            pointer-events: auto;
+        }
         .filters-panel.active { display: flex; gap: 10px; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 80px; }
         .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
         
-        /* FIX iOS: Font 16px evita lo zoom automatico, rimosso appearance:none per abilitare menu nativo */
         .filter-group input, .filter-group select { 
             padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; 
-            font-size: 16px; min-height: 44px;
+            font-size: 16px; /* Evita zoom Safari */
+            min-height: 44px;
         }
 
+        /* COMPONENTI UI RIMASTI COPIA CARBONE */
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
         .sort-toggle, .view-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
         .sort-btn, .view-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
@@ -71,7 +84,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.0</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.2</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -94,7 +107,7 @@
     <div id="tab-database" class="tab-content active">
         <div id="main-db-view">
             <div class="search-container">
-                <input type="text" id="manualSearch" class="search-input" placeholder="Titolo, regista, attore..." onkeypress="if(event.key === 'Enter') searchManual()">
+                <input type="text" id="manualSearch" class="search-input" placeholder="Cerca titolo, regista o attore..." onkeypress="if(event.key === 'Enter') searchManual()">
                 <button class="btn-filter" onclick="toggleFilters()">⚙️</button>
                 <button class="btn-search" onclick="searchManual()">GO</button>
                 <button class="btn-reset" onclick="resetFilters()">❌</button>
@@ -124,7 +137,6 @@
     </div>
 
     <div id="tab-cinema" class="tab-content">
-        <button class="btn-search" style="background:var(--red); color:#fff; width:100%; padding:15px; border-radius:12px; border:none; font-weight:800; margin-bottom: 20px;" onclick="window.open('https://www.google.com/search?q=cinema+vicino+a+me+orari','_blank')">📍 CINEMA VICINO A ME (GPS)</button>
         <h3 style="color: #fff; margin: 20px 0 10px; font-size: 0.9rem; text-align: center; font-family: 'Montserrat';">I TUOI PREFERITI</h3>
         <div style="display:grid; gap:10px;">
             <button onclick="window.open('https://www.facebook.com/supercinemacastello/#','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 SUPERCINEMA (Fondi)</button>
@@ -148,6 +160,9 @@
         let currentVault = []; 
         let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
         let lastScrollPos = 0, localDB = [];
+
+        // SENSORE HARDWARE PER BIMODALITÀ
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
         const COUNTRY_ISO_MAP = {
             "Afghanistan":"AF","Albania":"AL","Algeria":"DZ","American Samoa":"AS","Angola":"AO","Argentina":"AR","Armenia":"AM","Australia":"AU","Austria":"AT","Azerbaijan":"AZ","Bahamas":"BS","Bangladesh":"BD","Belarus":"BY","Belgium":"BE","Benin":"BJ","Bhutan":"BT","Bolivia":"BO","Bosnia and Herzegovina":"BA","Botswana":"BW","Brazil":"BR","Bulgaria":"BG","Burkina Faso":"BF","Cambodia":"KH","Cameroon":"CM","Canada":"CA","Cape Verde":"CV","Cayman Islands":"KY","Central African Republic":"CF","Chad":"TD","Chile":"CL","China":"CN","Colombia":"CO","Congo":"CG","Costa Rica":"CR","Cote D'Ivoire":"CI","Croatia":"HR","Cuba":"CU","Cyprus":"CY","Czech Republic":"CZ","Czechoslovakia":"XC","Denmark":"DK","Dominican Republic":"DO","East Germany":"XG","Ecuador":"EC","Egypt":"EG","Estonia":"EE","Ethiopia":"ET","Faeroe Islands":"FO","Finland":"FI","France":"FR","French Polynesia":"PF","Gabon":"GA","Georgia":"GE","Germany":"DE","Ghana":"GH","Gibraltar":"GI","Greece":"GR","Greenland":"GL","Guadaloupe":"GP","Guatemala":"GT","Guinea-Bissau":"GW","Haiti":"HT","Holy See":"VA","Honduras":"HN","Hong Kong":"HK","Hungary":"HU","Iceland":"IS","India":"IN","Indonesia":"ID","Iran":"IR","Iraq":"IQ","Ireland":"IE","Israel":"IL","Italy":"IT","Jamaica":"JM","Japan":"JP","Jordan":"JO","Kazakhstan":"KZ","Kenya":"KE","Kiribati":"KI","Kosovo":"XK","Kuwait":"KW","Kyrgyz Republic":"KG","Lao People's Democratic Republic":"LA","Latvia":"LV","Lebanon":"LB","Libyan Arab Jamahiriya":"LY","Liechtenstein":"LI","Lithuania":"LT","Luxembourg":"LU","Macao":"MO","Macedonia":"MK","Malaysia":"MY","Mali":"ML","Malta":"MT","Mauritania":"MR","Mexico":"MX","Moldova":"MD","Monaco":"MC","Mongolia":"MN","Montenegro":"ME","Morocco":"MA","Myanmar":"MM","Namibia":"NA","Nepal":"NP","Netherlands":"NL","Netherlands Antilles":"AN","New Zealand":"NZ","Nicaragua":"NI","Niger":"NE","Nigeria":"NG","North Korea":"KP","Norway":"NO","Pakistan":"PK","Palestinian Territory":"PS","Panama":"PA","Paraguay":"PY","Peru":"PE","Philippines":"PH","Poland":"PL","Portugal":"PT","Puerto Rico":"PR","Qatar":"QA","Romania":"RO","Russia":"RU","Samoa":"WS","San Marino":"SM","Saudi Arabia":"SA","Senegal":"SN","Serbia":"RS","Serbia and Montenegro":"CS","Singapore":"SG","Slovakia":"SK","Slovenia":"SI","Somalia":"SO","South Africa":"ZA","South Korea":"KR","Soviet Union":"SU","Spain":"ES","Sri Lanka":"LK","Suriname":"SR","Swaziland":"SZ","Sweden":"SE","Switzerland":"CH","Syrian Arab Republic":"SY","Taiwan":"TW","Tajikistan":"TJ","Tanzania":"TZ","Thailand":"TH","Togo":"TG","Tunisia":"TN","Turkey":"TR","Turks and Caicos Islands":"TC","US Virgin Islands":"VI","Ukraine":"UA","United Arab Emirates":"AE","United Kingdom":"GB","United States of America":"US","Uruguay":"UY","Uzbekistan":"UZ","Vanuatu":"VU","Venezuela":"VE","Vietnam":"VN","Yemen":"YE","Yugoslavia":"YU","Zambia":"ZM","Zimbabwe":"ZW"
@@ -216,7 +231,6 @@
             if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters();
         }
 
-        function updateStatus(msg) { document.getElementById('syncIndicator').innerText = msg; }
         async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
         window.onload = () => { gapi.load('client', intializeGapiClient); };
         function handleAuthClick() {
@@ -242,20 +256,18 @@
                     const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` });
                     vaultFileId = check.result.files[0].id;
                 }
-                updateStatus("Cloud Sincronizzato ✓");
-                if(document.getElementById('tab-watchlist').classList.contains('active')) renderWatchlist();
-            } catch (e) { updateStatus("Errore Sync Cloud"); }
+                document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓";
+            } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; }
         }
         async function saveToCloud() {
             const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' };
             const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`;
             await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body });
-            updateStatus("Cloud Sincronizzato ✓");
         }
 
         async function fetchTimeMachine() {
-            const resultsContainer = document.getElementById('resultsContainer');
-            resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Viaggio nel tempo...</p>';
+            const rc = document.getElementById('resultsContainer');
+            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">In viaggio...</p>';
             const today = new Date(), past = new Date(); past.setDate(today.getDate() - 180);
             try {
                 const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${past.toISOString().split('T')[0]}&with_release_type=2|3`;
@@ -264,17 +276,18 @@
                 let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); });
                 currentMovieArray = Array.from(new Map(combined.filter(m => m.release_date && new Date(m.release_date) >= past).map(m => [m.id, m])).values());
                 renderUI();
-            } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
+            } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; }
         }
 
+        // --- RICERCA MANUALE BIMODALE VALIDATA (VARIAZIONE CHIRURGICA) ---
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
             const yearTo = document.getElementById('filterYearTo').value;
             const country = document.getElementById('filterCountry').value;
-            const resultsContainer = document.getElementById('resultsContainer');
+            const rc = document.getElementById('resultsContainer');
             if(!query && !yearFrom && !yearTo && !country) return;
-            resultsContainer.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso...</p>';
+            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca...</p>';
             
             const validateMovie = (m) => {
                 const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
@@ -285,34 +298,40 @@
                 return matchYearFrom && matchYearTo && matchCountry;
             };
 
+            // LOGICA CAVEAU (SOLO PC)
             if (localDB.length > 0) {
-                let results = localDB.filter(m => {
+                let res = localDB.filter(m => {
                     const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
                     return matchText && validateMovie(m);
                 });
-                if (results.length > 0) { currentMovieArray = results.slice(0, 100); renderUI(); return; }
+                if (res.length > 0) { currentMovieArray = res.slice(0, 100); renderUI(); return; }
             }
 
+            // LOGICA TMDB BIMODALE (VARIAZIONE PER iOS)
             try {
                 let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
-                // FIX LOGICA IPHONE: Forzatura esplicita date solari
-                if (yearFrom) discUrl += `&primary_release_date.gte=${parseInt(yearFrom)}-01-01`;
-                if (yearTo) discUrl += `&primary_release_date.lte=${parseInt(yearTo)}-12-31`;
+                
+                if (isIOS && yearFrom && yearFrom === yearTo) {
+                    // BLINDATURA iOS: Anno atomico se gli anni coincidono
+                    discUrl += `&primary_release_year=${parseInt(yearFrom)}`;
+                } else {
+                    // BLINDATURA PC: Range completo originale
+                    if (yearFrom) discUrl += `&primary_release_date.gte=${parseInt(yearFrom)}-01-01`;
+                    if (yearTo) discUrl += `&primary_release_date.lte=${parseInt(yearTo)}-12-31`;
+                }
+
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
                 let results = [];
                 if (query) {
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                    const data = await res.json();
-                    results = (data.results || []).filter(m => validateMovie(m));
+                    results = ((await res.json()).results || []).filter(m => validateMovie(m));
                 } else {
-                    const res = await fetch(discUrl);
-                    const data = await res.json();
-                    results = data.results || [];
+                    results = (await (await fetch(discUrl)).json()).results || [];
                 }
                 currentMovieArray = results;
                 renderUI();
-            } catch (e) { resultsContainer.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete.</p>'; }
+            } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore di rete.</p>'; }
         }
 
         function renderUI() {
@@ -355,7 +374,7 @@
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=No+Poster';
             document.getElementById('main-db-view').style.display = 'none';
             const dv = document.getElementById('detail-view'); dv.style.display = 'block'; dv.innerHTML = '';
-            const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; b.onclick = closeDetails;
+            const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; b.onclick = () => { dv.style.display = 'none'; document.getElementById('main-db-view').style.display = 'block'; setTimeout(() => window.scrollTo(0, lastScrollPos), 10); };
             const c = document.createElement('div'); c.className = 'movie-card';
             c.innerHTML = `<img src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, post, m.release_date);
@@ -363,9 +382,8 @@
             dv.append(b, c); window.scrollTo(0, 0);
         }
 
-        function closeDetails() { document.getElementById('detail-view').style.display = 'none'; document.getElementById('main-db-view').style.display = 'block'; setTimeout(() => window.scrollTo(0, lastScrollPos), 10); }
         function switchTab(t, el) { document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); document.getElementById('tab-' + t).classList.add('active'); if(el) el.classList.add('active'); if(t === 'watchlist') renderWatchlist(); window.scrollTo(0, 0); }
-        async function saveToWL(id, title, poster, date) { const s = String(id); let i = currentVault.findIndex(x => String(x.id) === s); if(i !== -1) { currentVault[i].date = date || 'N/D'; alert("Aggiornato!"); } else { currentVault.unshift({id: s, title, poster, date: date || 'N/D'}); alert("Salvato!"); } await saveToCloud(); }
+        async function saveToWL(id, title, poster, date) { const s = String(id); let i = currentVault.findIndex(x => String(x.id) === s); if(i !== -1) { currentVault[i].date = date || 'N/D'; } else { currentVault.unshift({id: s, title, poster, date: date || 'N/D'}); } await saveToCloud(); alert("Salvato!"); }
         function renderWatchlist() {
             const c = document.getElementById('watchlistContainer');
             if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Cassaforte vuota.</p>'; return; }
