@@ -59,6 +59,11 @@
         .wl-poster { width: 50px; height: 75px; border-radius: 6px; margin-right: 15px; object-fit: cover; cursor: pointer; }
         .wl-content { flex: 1; cursor: pointer; }
         .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
+        
+        /* INIEZIONE CHIRURGICA 1: Nascondere i filtri avanzati su mobile */
+        @media (max-width: 768px) {
+            .hide-on-mobile { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -106,6 +111,42 @@
                     <label>Paese</label>
                     <select id="filterCountry">
                         <option value="">Tutte le nazioni</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group hide-on-mobile">
+                    <label>Tipologia IT</label>
+                    <select id="search-type">
+                        <option value="">Tutte</option>
+                        <option value="2">2 - Limitata</option>
+                        <option value="3">3 - Cinema</option>
+                        <option value="4">4 - Digitale</option>
+                        <option value="5">5 - Fisico</option>
+                        <option value="6">6 - TV</option>
+                    </select>
+                </div>
+                <div class="filter-group hide-on-mobile">
+                    <label>Genere</label>
+                    <select id="search-genre">
+                        <option value="">Tutti</option>
+                        <option value="azione">Azione</option>
+                        <option value="animazione">Animazione</option>
+                        <option value="avventura">Avventura</option>
+                        <option value="commedia">Commedia</option>
+                        <option value="crime">Crime</option>
+                        <option value="documentario">Documentario</option>
+                        <option value="dramma">Dramma</option>
+                        <option value="famiglia">Famiglia</option>
+                        <option value="fantascienza">Fantascienza</option>
+                        <option value="fantasy">Fantasy</option>
+                        <option value="guerra">Guerra</option>
+                        <option value="horror">Horror</option>
+                        <option value="mistero">Mistero</option>
+                        <option value="musica">Musica</option>
+                        <option value="romance">Romance</option>
+                        <option value="storia">Storia</option>
+                        <option value="thriller">Thriller</option>
+                        <option value="western">Western</option>
                     </select>
                 </div>
             </div>
@@ -167,7 +208,8 @@
                     getReq.onsuccess = (ev) => { 
                         if (ev.target.result && ev.target.result.data) { 
                             localDB = ev.target.result.data; 
-                            updateDbStatus(); 
+                            // INIEZIONE CHIRURGICA 3: Passiamo la data salvata
+                            updateDbStatus(ev.target.result.uploadDate); 
                         }
                         populateCountryDropdown();
                     };
@@ -181,6 +223,7 @@
         function loadLocalDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
+            const fileDate = file.lastModified; // Salviamo la data fisica del file
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -196,8 +239,9 @@
                         try {
                             const db = ev.target.result;
                             const tx = db.transaction("json_store", "readwrite");
-                            tx.objectStore("json_store").put({ id: "master_db", data: localDB });
-                            tx.oncomplete = () => { updateDbStatus(); populateCountryDropdown(); alert("✅ DB Memorizzato!"); };
+                            // INIEZIONE CHIRURGICA 3: Memorizziamo la data fisica assieme al file
+                            tx.objectStore("json_store").put({ id: "master_db", data: localDB, uploadDate: fileDate });
+                            tx.oncomplete = () => { updateDbStatus(fileDate); populateCountryDropdown(); alert("✅ DB Memorizzato!"); };
                         } catch (err) { alert("❌ Errore IndexedDB."); }
                     };
                 } catch (err) { alert("❌ Errore JSON."); }
@@ -205,15 +249,18 @@
             reader.readAsText(file);
         }
 
-        function updateDbStatus() {
+        // INIEZIONE CHIRURGICA 3: Calcolo dell'orologio fisico
+        function updateDbStatus(timestamp) {
             const statusDiv = document.getElementById("dbStatus");
             if (localDB.length === 0) { statusDiv.className = "db-status red"; statusDiv.innerHTML = "🔴 DB: Assente (Solo TMDB)"; return; }
-            let maxDate = "1900-01-01";
-            localDB.forEach(m => { if (m.release_date && m.release_date > maxDate) maxDate = m.release_date; });
-            const formattedDate = maxDate.split('-').reverse().join('/');
-            const diffDays = Math.floor((new Date().getTime() - new Date(maxDate).getTime()) / (1000 * 60 * 60 * 24));
-            statusDiv.className = diffDays <= 21 ? "db-status green" : "db-status red";
-            statusDiv.innerHTML = diffDays <= 21 ? `🟢 DB Allineato (${formattedDate})` : `🔴 Aggiorna DB (${formattedDate})`;
+            
+            // Usa il timestamp salvato nel database, altrimenti data odierna per sicurezza
+            const fileDate = timestamp ? new Date(timestamp) : new Date();
+            const formattedDate = fileDate.toLocaleDateString('it-IT');
+            const diffDays = Math.floor((new Date().getTime() - fileDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            statusDiv.className = diffDays <= 15 ? "db-status green" : "db-status red";
+            statusDiv.innerHTML = diffDays <= 15 ? `🟢 DB Allineato (${formattedDate})` : `🔴 Aggiorna DB (${formattedDate})`;
         }
 
         function populateCountryDropdown() {
@@ -230,7 +277,7 @@
         }
 
         function toggleFilters() { document.getElementById("filtersPanel").classList.toggle("active"); }
-        function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
+        function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; document.getElementById('search-type').selectedIndex = 0; document.getElementById('search-genre').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
         async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
         window.onload = () => { gapi.load('client', intializeGapiClient); };
         function handleAuthClick() { const tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: async (resp) => { accessToken = resp.access_token; document.getElementById('loginOverlay').style.display = 'none'; await startCloudSync(); } }); tokenClient.requestAccessToken(); }
@@ -270,8 +317,13 @@
             const yearFrom = document.getElementById('filterYearFrom').value;
             const yearTo = document.getElementById('filterYearTo').value;
             const country = document.getElementById('filterCountry').value;
+            
+            // INIEZIONE CHIRURGICA 4: Lettura dei nuovi filtri
+            const typeQuery = document.getElementById('search-type') ? document.getElementById('search-type').value : "";
+            const genreQuery = document.getElementById('search-genre') ? document.getElementById('search-genre').value.toLowerCase() : "";
+
             const rc = document.getElementById('resultsContainer');
-            if(!query && !yearFrom && !yearTo && !country) return;
+            if(!query && !yearFrom && !yearTo && !country && !typeQuery && !genreQuery) return;
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Fusione Database e Rete a Strascico in corso...</p>';
             let risultati_totali = new Map();
             
@@ -295,7 +347,11 @@
                     matchCountry = true; // IL LASCIAPASSARE: Ci fidiamo del filtro a monte di TMDB
                 }
                 
-                return matchYearFrom && matchYearTo && matchCountry;
+                // INIEZIONE CHIRURGICA 4: Logica inclusiva dei nuovi filtri
+                const matchType = !typeQuery || (m.release_type && m.release_type.includes(typeQuery));
+                const matchGenre = !genreQuery || (m.genres && m.genres.toLowerCase().includes(genreQuery));
+                
+                return matchYearFrom && matchYearTo && matchCountry && matchType && matchGenre;
             };
 
             if (localDB.length > 0) {
