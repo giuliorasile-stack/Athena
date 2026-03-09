@@ -151,7 +151,7 @@
                 </div>
             </div>
 
-            <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (400 TITOLI - 180GG)</button>
+            <button class="btn-now-playing" onclick="fetchTimeMachine()">🍿 OGGI AL CINEMA (-30 / +15 GG)</button>
             <div id="resultsContainer"></div>
         </div>
         <div id="detail-view" style="display:none;"></div>
@@ -208,7 +208,6 @@
                     getReq.onsuccess = (ev) => { 
                         if (ev.target.result && ev.target.result.data) { 
                             localDB = ev.target.result.data; 
-                            // INIEZIONE CHIRURGICA 3: Passiamo la data salvata
                             updateDbStatus(ev.target.result.uploadDate); 
                         }
                         populateCountryDropdown();
@@ -223,7 +222,7 @@
         function loadLocalDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
-            const fileDate = file.lastModified; // Salviamo la data fisica del file
+            const fileDate = file.lastModified; 
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -239,7 +238,6 @@
                         try {
                             const db = ev.target.result;
                             const tx = db.transaction("json_store", "readwrite");
-                            // INIEZIONE CHIRURGICA 3: Memorizziamo la data fisica assieme al file
                             tx.objectStore("json_store").put({ id: "master_db", data: localDB, uploadDate: fileDate });
                             tx.oncomplete = () => { updateDbStatus(fileDate); populateCountryDropdown(); alert("✅ DB Memorizzato!"); };
                         } catch (err) { alert("❌ Errore IndexedDB."); }
@@ -249,12 +247,10 @@
             reader.readAsText(file);
         }
 
-        // INIEZIONE CHIRURGICA 3: Calcolo dell'orologio fisico
         function updateDbStatus(timestamp) {
             const statusDiv = document.getElementById("dbStatus");
             if (localDB.length === 0) { statusDiv.className = "db-status red"; statusDiv.innerHTML = "🔴 DB: Assente (Solo TMDB)"; return; }
             
-            // Usa il timestamp salvato nel database, altrimenti data odierna per sicurezza
             const fileDate = timestamp ? new Date(timestamp) : new Date();
             const formattedDate = fileDate.toLocaleDateString('it-IT');
             const diffDays = Math.floor((new Date().getTime() - fileDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -284,12 +280,16 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
+        // INIEZIONE CHIRURGICA: Modifica Logica Funzione (-30 / +15 Giorni, Solo Tipologia 3)
         async function fetchTimeMachine() { 
             const rc = document.getElementById('resultsContainer'); 
-            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">In viaggio...</p>'; 
-            const today = new Date(), past = new Date(); past.setDate(today.getDate() - 180); 
+            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso (Oggi al Cinema)...</p>'; 
+            const past = new Date(); past.setDate(past.getDate() - 30); 
+            const future = new Date(); future.setDate(future.getDate() + 15);
             try { 
-                const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${past.toISOString().split('T')[0]}&with_release_type=2|3`; 
+                const strPast = past.toISOString().split('T')[0];
+                const strFuture = future.toISOString().split('T')[0];
+                const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${strPast}&release_date.lte=${strFuture}&with_release_type=3`; 
                 let datasets = [];
                 
                 // BIFORCAZIONE DEL TRAFFICO: Sequenziale per iOS, Simultaneo per PC
@@ -307,7 +307,11 @@
 
                 let combined = []; 
                 datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); }); 
-                currentMovieArray = Array.from(new Map(combined.filter(m => m.release_date && new Date(m.release_date) >= past).map(m => [m.id, m])).values()); 
+                currentMovieArray = Array.from(new Map(combined.filter(m => {
+                    if (!m.release_date) return false;
+                    const d = new Date(m.release_date);
+                    return d >= past && d <= future;
+                }).map(m => [m.id, m])).values()); 
                 renderUI(); 
             } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; } 
         }
@@ -318,7 +322,6 @@
             const yearTo = document.getElementById('filterYearTo').value;
             const country = document.getElementById('filterCountry').value;
             
-            // INIEZIONE CHIRURGICA 4: Lettura dei nuovi filtri
             const typeQuery = document.getElementById('search-type') ? document.getElementById('search-type').value : "";
             const genreQuery = document.getElementById('search-genre') ? document.getElementById('search-genre').value.toLowerCase() : "";
 
@@ -327,7 +330,6 @@
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Fusione Database e Rete a Strascico in corso...</p>';
             let risultati_totali = new Map();
             
-            // LA NUOVA DOGANA INTELLIGENTE (Aggiunto parametro trustTMDB)
             const validateMovie = (m, trustTMDB = false) => {
                 const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
                 if ((yearFrom || yearTo) && releaseYear === 0) return false;
@@ -344,10 +346,9 @@
                     matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); 
                 }
                 else if (trustTMDB) { 
-                    matchCountry = true; // IL LASCIAPASSARE: Ci fidiamo del filtro a monte di TMDB
+                    matchCountry = true; 
                 }
                 
-                // INIEZIONE CHIRURGICA 4: Logica inclusiva dei nuovi filtri
                 const matchType = !typeQuery || (m.release_type && m.release_type.includes(typeQuery));
                 const matchGenre = !genreQuery || (m.genres && m.genres.toLowerCase().includes(genreQuery));
                 
@@ -369,7 +370,6 @@
                 if (query) {
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
-                    // Niente lasciapassare qui: l'API search standard non filtra a monte la nazione
                     (data_movie.results || []).forEach(m => { if(validateMovie(m, false)) risultati_totali.set(String(m.id), m); });
                     
                     const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
@@ -378,18 +378,16 @@
                         const p_id = data_person.results[0].id;
                         let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${p_id}&sort_by=release_date.desc`;
                         
-                        // AGGIUNTA CHIRURGICA: Applichiamo il filtro nazione anche alla ricerca per Attore/Regista
                         if (country && COUNTRY_ISO_MAP[country]) url_discover_base += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                         
                         const res_p1 = await fetch(url_discover_base + "&page=1");
                         const data_p1 = await res_p1.json();
-                        (data_p1.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); // Lasciapassare Attivo!
+                        (data_p1.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); 
                         
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
                         if (tot_pages_fetch > 1) {
                             let pagesData = [];
                             
-                            // BIFORCAZIONE TRAFFICO PERSONE
                             if (isIOS) {
                                 for (let p = 2; p <= tot_pages_fetch; p++) {
                                     try {
@@ -403,13 +401,12 @@
                                 pagesData = await Promise.all(pagePromises);
                             }
                             
-                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); // Lasciapassare Attivo!
+                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); 
                         }
                     }
                 } else {
                     let datasets = [];
                     
-                    // BIFORCAZIONE TRAFFICO RICERCA VUOTA
                     if (isIOS) {
                         for (let p = 1; p <= 20; p++) {
                             try {
@@ -422,7 +419,7 @@
                         datasets = await Promise.all(responses.map(r => r.json()));
                     }
                     
-                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); // Lasciapassare Attivo!
+                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); 
                 }
             } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
             
