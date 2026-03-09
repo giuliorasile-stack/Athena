@@ -2,428 +2,430 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.2 Ibrida</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athena Cinema Radar</title>
     <style>
-        :root { --bg-dark: #0f0f0f; --gold: #f5c518; --red: #e74c3c; --green: #2ecc71; --text-light: #fff; --text-muted: #bbb; --card-bg: rgba(255, 255, 255, 0.05); }
-        body { background-color: var(--bg-dark); color: var(--text-light); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 40px; -webkit-font-smoothing: antialiased; }
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .sync-status { font-size: 0.65rem; color: var(--gold); padding: 5px; background: #000; text-align: center; border-bottom: 1px solid #333; }
-        .sticky-header { position: sticky; top: 0; z-index: 1000; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid var(--gold); }
-        .header-title { padding: 15px 20px 10px; display: flex; justify-content: space-between; align-items: center; }
-        .header-title h1 { color: var(--gold); font-size: 1.5rem; font-weight: 900; margin: 0; font-family: 'Montserrat'; }
-        .db-status { font-size: 0.65rem; padding: 5px 10px; border-radius: 12px; background: #222; font-weight: 800; cursor: pointer; border: 1px solid #444; text-transform: uppercase; }
-        .db-status.green { border-color: var(--green); color: var(--green); }
-        .db-status.red { border-color: var(--red); color: var(--red); }
-        .top-nav { display: flex; justify-content: space-around; padding: 10px 0; }
-        .nav-item { color: #fff; text-align: center; font-family: 'Montserrat'; font-size: 0.85rem; font-weight: 900; flex: 1; cursor: pointer; padding: 5px 0; }
-        .nav-item.active { color: var(--gold); }
-        .tab-content { display: none; padding: 20px; animation: fadeIn 0.2s ease; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .search-container { display: flex; gap: 5px; margin-bottom: 10px; align-items: stretch; }
-        .search-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; min-width: 0; }
-        .btn-filter { background: #333; border: none; padding: 0 10px; border-radius: 10px; font-size: 1rem; cursor: pointer; color: white; }
-        .btn-search { background: var(--gold); border: none; padding: 0 15px; border-radius: 10px; font-weight: 900; cursor: pointer; color: #000; font-size: 0.8rem; }
-        .btn-reset { background: #444; border: none; padding: 0 12px; border-radius: 10px; color: white; cursor: pointer; font-size: 0.9rem; }
-        .filters-panel { display: none; background: #161616; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; position: relative; z-index: 9999; pointer-events: auto; }
-        .filters-panel.active { display: flex; gap: 10px; flex-wrap: wrap; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 80px; }
-        .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
-        .filter-group input, .filter-group select { padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 16px; min-height: 44px; }
-        .filter-group select { -webkit-appearance: none; appearance: none; cursor: pointer; position: relative; z-index: 10000; -webkit-transform: translateZ(0); pointer-events: auto !important; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23f5c518%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 12px auto; padding-right: 30px; }
-        .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
-        .sort-toggle, .view-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
-        .sort-btn, .view-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
-        .sort-btn.active, .view-btn.active { background: var(--gold); color: #000; }
-        .movies-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .grid-item { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); position: relative; cursor: pointer; }
-        .grid-poster { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; }
-        .grid-title { font-size: 0.8rem; font-weight: 700; padding: 8px; text-align: center; }
-        .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); }
-        .list-item { background: #1a1a1a; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-bottom: 6px; cursor: pointer; }
-        .list-data-dynamic { color: var(--gold); font-size: 0.75rem; font-weight: 900; font-family: 'Montserrat'; text-align: right; }
-        .btn-back { background: #333; color: #fff; width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 800; margin-bottom: 15px; font-size: 0.85rem; cursor: pointer; }
-        .movie-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-        .movie-info { padding: 20px; }
-        .data-label { color: var(--gold); font-weight: 900; font-family: 'Montserrat'; font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; display: block; }
-        .data-value { color: #fff; font-size: 0.95rem; display: block; margin-top: 4px; line-height: 1.4; }
-        .btn-save { background: var(--green); color: #000; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 10px; cursor: pointer; }
-        .btn-trailer { background: #ff0000; color: #fff; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 25px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .wl-item { display: flex; align-items: center; background: #1a1a1a; padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #333; }
-        .wl-poster { width: 50px; height: 75px; border-radius: 6px; margin-right: 15px; object-fit: cover; cursor: pointer; }
-        .wl-content { flex: 1; cursor: pointer; }
-        .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .title { color: #4CAF50; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+        .status-bar { font-size: 14px; font-weight: bold; background: #222; padding: 5px 10px; border-radius: 5px; }
+        
+        .upload-section { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+        .file-input-wrapper { display: flex; gap: 10px; align-items: center; }
+        
+        .search-panel { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; }
+        .search-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .search-input { background: #2d2d2d; border: 1px solid #444; color: white; padding: 10px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .search-input:focus { outline: none; border-color: #4CAF50; }
+        select.search-input { appearance: auto; cursor: pointer; }
+        
+        .btn-search { background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; text-transform: uppercase; transition: background 0.3s; }
+        .btn-search:hover { background: #45a049; }
+        
+        .results-header { margin-top: 30px; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px; display: flex; justify-content: space-between; }
+        
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        
+        .movie-card { background: #1e1e1e; border-radius: 8px; overflow: hidden; border: 1px solid #333; cursor: pointer; transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; }
+        .movie-card:hover { transform: translateY(-5px); border-color: #4CAF50; }
+        .poster-container { position: relative; width: 100%; padding-top: 150%; background: #000; }
+        .poster { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .card-info { padding: 12px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .m-title { font-size: 14px; font-weight: bold; margin: 0 0 5px 0; color: #fff; line-height: 1.2; }
+        .m-meta { font-size: 12px; color: #aaa; margin: 0; }
+        .badge-source { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; margin-top: 5px; display: inline-block; align-self: flex-start; }
+        .badge-local { background: #4CAF50; color: #000; }
+        .badge-tmdb { background: #E50914; color: #fff; }
+
+        /* MODALE DETTAGLI */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #1e1e1e; width: 90%; max-width: 900px; max-height: 90vh; border-radius: 12px; overflow-y: auto; display: flex; flex-direction: row; border: 1px solid #4CAF50; box-shadow: 0 0 30px rgba(76, 175, 80, 0.2); }
+        .modal-poster { width: 40%; background: #000; }
+        .modal-poster img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-details { width: 60%; padding: 30px; position: relative; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; color: #aaa; cursor: pointer; transition: color 0.2s; line-height: 1; }
+        .close-btn:hover { color: #fff; }
+        
+        .d-title { font-size: 28px; margin: 0 0 5px 0; color: #4CAF50; }
+        .d-meta { font-size: 14px; color: #888; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .d-section { margin-bottom: 15px; }
+        .d-label { font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+        .d-value { font-size: 15px; color: #fff; }
+        .d-overview { font-size: 14px; line-height: 1.6; color: #ccc; margin-top: 20px; background: #2d2d2d; padding: 15px; border-radius: 8px; border-left: 3px solid #4CAF50; }
+
+        @media (max-width: 768px) {
+            .modal-content { flex-direction: column; }
+            .modal-poster, .modal-details { width: 100%; }
+            .modal-poster { height: 300px; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.2</h1>
-        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
-        <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
+    <div class="header">
+        <h1 class="title">Athena Cinema Lab</h1>
+        <div id="db-status" class="status-bar" style="color: #ff9800;">🟡 ATTESA JSON MASTER</div>
     </div>
 
-    <div id="syncIndicator" class="sync-status">ATTESA CONNESSIONE DRIVE...</div>
-
-    <div class="sticky-header">
-        <div class="header-title">
-            <h1>ATHENA LAB</h1>
-            <div id="dbStatus" class="db-status red" onclick="document.getElementById('fileInput').click()">🔴 DB: Assente (Solo TMDB)</div>
-            <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadLocalDatabase(event)">
-        </div>
-        <div class="top-nav">
-            <div id="nav-db" class="nav-item active" onclick="switchTab('database', this)">🔍 DATABASE</div>
-            <div id="nav-cinema" class="nav-item" onclick="switchTab('cinema', this)">🎟️ IN SALA</div>
-            <div id="nav-wl" class="nav-item" onclick="switchTab('watchlist', this)">💾 CASSAFORTE</div>
+    <div class="upload-section">
+        <div class="file-input-wrapper">
+            <input type="file" id="db-file" accept=".json" class="search-input" style="flex-grow: 1;">
+            <div style="font-size: 12px; color: #888;">Carica il file "storico_master.json" per abilitare il motore di ricerca.</div>
         </div>
     </div>
 
-    <div id="tab-database" class="tab-content active">
-        <div id="main-db-view">
-            <div class="search-container">
-                <input type="text" id="manualSearch" class="search-input" placeholder="Cerca titolo, regista o attore..." onkeypress="if(event.key === 'Enter') searchManual()">
-                <button class="btn-filter" onclick="toggleFilters()">⚙️</button>
-                <button class="btn-search" onclick="searchManual()">GO</button>
-                <button class="btn-reset" onclick="resetFilters()">❌</button>
-            </div>
+    <div class="search-panel">
+        <div class="search-grid">
+            <input type="text" id="search-title" class="search-input" placeholder="Titolo (es. Batman)...">
+            <input type="number" id="search-year" class="search-input" placeholder="Anno (es. 2024)...">
+            <input type="text" id="search-director" class="search-input" placeholder="Regista...">
+            <input type="text" id="search-actor" class="search-input" placeholder="Attore/Attrice...">
+            <input type="text" id="search-country" class="search-input" placeholder="Paese (es. Italy)...">
             
-            <div id="filtersPanel" class="filters-panel">
-                <div class="filter-group">
-                    <label>Dal (Anno)</label>
-                    <input type="number" id="filterYearFrom" placeholder="es. 1990">
-                </div>
-                <div class="filter-group">
-                    <label>Al (Anno)</label>
-                    <input type="number" id="filterYearTo" placeholder="es. 2026">
-                </div>
-                <div class="filter-group">
-                    <label>Paese</label>
-                    <select id="filterCountry">
-                        <option value="">Tutte le nazioni</option>
-                    </select>
-                </div>
+            <select id="search-type" class="search-input">
+                <option value="">Tutte le Tipologie</option>
+                <option value="2">2 - Uscita Limitata</option>
+                <option value="3">3 - Cinema (Theatrical)</option>
+                <option value="4">4 - Digitale (Streaming/VOD)</option>
+                <option value="5">5 - Supporto Fisico (DVD/Blu-Ray)</option>
+                <option value="6">6 - Film TV</option>
+            </select>
+
+            <select id="search-genre" class="search-input">
+                <option value="">Tutti i Generi</option>
+                <option value="azione">Azione</option>
+                <option value="animazione">Animazione</option>
+                <option value="avventura">Avventura</option>
+                <option value="commedia">Commedia</option>
+                <option value="crime">Crime</option>
+                <option value="documentario">Documentario</option>
+                <option value="dramma">Dramma</option>
+                <option value="famiglia">Famiglia</option>
+                <option value="fantascienza">Fantascienza</option>
+                <option value="fantasy">Fantasy</option>
+                <option value="guerra">Guerra</option>
+                <option value="horror">Horror</option>
+                <option value="mistero">Mistero</option>
+                <option value="musica">Musica</option>
+                <option value="romance">Romance</option>
+                <option value="storia">Storia</option>
+                <option value="thriller">Thriller</option>
+                <option value="western">Western</option>
+            </select>
+        </div>
+        <button class="btn-search" onclick="searchManual()">Avvia Ricerca Ibrida</button>
+    </div>
+
+    <div class="results-header">
+        <span id="results-count">Risultati: 0</span>
+        <span style="font-size: 12px; color: #888;">Motore Ibrido: Locale + TMDB Online</span>
+    </div>
+
+    <div id="results-grid" class="grid-container">
+        </div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-poster">
+                <img id="m-img" src="" alt="Poster">
             </div>
-
-            <button class="btn-now-playing" onclick="fetchTimeMachine()">🎬 TIME MACHINE (400 TITOLI - 180GG)</button>
-            <div id="resultsContainer"></div>
+            <div class="modal-details">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <h2 id="m-title" class="d-title">Titolo</h2>
+                <div id="m-meta" class="d-meta">Data • Generi</div>
+                
+                <div class="d-section">
+                    <div class="d-label">Regia</div>
+                    <div id="m-director" class="d-value">N/D</div>
+                </div>
+                <div class="d-section">
+                    <div class="d-label">Cast Principale</div>
+                    <div id="m-cast" class="d-value">N/D</div>
+                </div>
+                <div class="d-section">
+                    <div class="d-label">Produzione</div>
+                    <div id="m-country" class="d-value">N/D</div>
+                </div>
+                <div class="d-section">
+                    <div class="d-label">Tipologia di Uscita (IT)</div>
+                    <div id="m-type" class="d-value">N/D</div>
+                </div>
+                
+                <div id="m-overview" class="d-overview">Trama non disponibile.</div>
+            </div>
         </div>
-        <div id="detail-view" style="display:none;"></div>
     </div>
-
-    <div id="tab-cinema" class="tab-content">
-        <button class="btn-search" style="background:var(--red); color:#fff; width:100%; padding:15px; border-radius:12px; border:none; font-weight:800; margin-bottom: 20px;" onclick="window.open('https://www.google.com/search?q=cinema+vicino+a+me+orari','_blank')">📍 CINEMA VICINO A ME (GPS)</button>
-        <h3 style="color: #fff; margin: 20px 0 10px; font-size: 0.9rem; text-align: center; font-family: 'Montserrat';">I TUOI PREFERITI</h3>
-        <div style="display:grid; gap:10px;">
-            <button onclick="window.open('https://www.facebook.com/supercinemacastello/#','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 SUPERCINEMA (Fondi)</button>
-            <button onclick="window.open('https://www.facebook.com/cinemaugusto/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 AUGUSTO (Sperlonga)</button>
-            <button onclick="window.open('https://www.cinemateatrotraiano.it/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 TRAIANO (Terracina)</button>
-            <button onclick="window.open('https://www.riocinemamultisala.com/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 RIO (Terracina)</button>
-            <button onclick="window.open('https://www.aristongaeta.it/programmazione-cinema/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 ARISTON (Gaeta)</button>
-            <button onclick="window.open('https://multisaladelmare.18tickets.it/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 DEL MARE (Formia)</button>
-        </div>
-    </div>
-
-    <div id="tab-watchlist" class="tab-content"><div id="watchlistContainer"></div></div>
 
     <script>
-        const CLIENT_ID = '62527185116-dvsbjccvpib45bu7k3are8aeekadas3v.apps.googleusercontent.com';
-        const FOLDER_NAME = "Cinema Lab cassaforte";
-        const FILE_NAME = "athena_vault.json";
         const TMDB_API_KEY = "e2d58e4dfdd0a14cdce19d08d49bb21e";
-        
-        let accessToken = null, vaultFileId = null;
-        let currentVault = []; 
-        let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
-        let lastScrollPos = 0, localDB = [];
+        let localDB = [];
+        let currentMergedResults = new Map(); // Mappa per fondere Locale e TMDB senza doppioni
 
-        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-
-        const COUNTRY_ISO_MAP = {
-            "Afghanistan":"AF","Albania":"AL","Algeria":"DZ","American Samoa":"AS","Angola":"AO","Argentina":"AR","Armenia":"AM","Australia":"AU","Austria":"AT","Azerbaijan":"AZ","Bahamas":"BS","Bangladesh":"BD","Belarus":"BY","Belgium":"BE","Benin":"BJ","Bhutan":"BT","Bolivia":"BO","Bosnia and Herzegovina":"BA","Botswana":"BW","Brazil":"BR","Bulgaria":"BG","Burkina Faso":"BF","Cambodia":"KH","Cameroon":"CM","Canada":"CA","Cape Verde":"CV","Cayman Islands":"KY","Central African Republic":"CF","Chad":"TD","Chile":"CL","China":"CN","Colombia":"CO","Congo":"CG","Costa Rica":"CR","Cote D'Ivoire":"CI","Croatia":"HR","Cuba":"CU","Cyprus":"CY","Czech Republic":"CZ","Czechoslovakia":"XC","Denmark":"DK","Dominican Republic":"DO","East Germany":"XG","Ecuador":"EC","Egypt":"EG","Estonia":"EE","Ethiopia":"ET","Faeroe Islands":"FO","Finland":"FI","France":"FR","French Polynesia":"PF","Gabon":"GA","Georgia":"GE","Germany":"DE","Ghana":"GH","Gibraltar":"GI","Greece":"GR","Greenland":"GL","Guadaloupe":"GP","Guatemala":"GT","Guinea-Bissau":"GW","Haiti":"HT","Holy See":"VA","Honduras":"HN","Hong Kong":"HK","Hungary":"HU","Iceland":"IS","India":"IN","Indonesia":"ID","Iran":"IR","Iraq":"IQ","Ireland":"IE","Israel":"IL","Italy":"IT","Jamaica":"JM","Japan":"JP","Jordan":"JO","Kazakhstan":"KZ","Kenya":"KE","Kiribati":"KI","Kosovo":"XK","Kuwait":"KW","Kyrgyz Republic":"KG","Lao People's Democratic Republic":"LA","Latvia":"LV","Lebanon":"LB","Libyan Arab Jamahiriya":"LY","Liechtenstein":"LI","Lithuania":"LT","Luxembourg":"LU","Macao":"MO","Macedonia":"MK","Malaysia":"MY","Mali":"ML","Malta":"MT","Mauritania":"MR","Mexico":"MX","Moldova":"MD","Monaco":"MC","Mongolia":"MN","Montenegro":"ME","Morocco":"MA","Myanmar":"MM","Namibia":"NA","Nepal":"NP","Netherlands":"NL","Netherlands Antilles":"AN","New Zealand":"NZ","Nicaragua":"NI","Niger":"NE","Nigeria":"NG","North Korea":"KP","Norway":"NO","Pakistan":"PK","Palestinian Territory":"PS","Panama":"PA","Paraguay":"PY","Peru":"PE","Philippines":"PH","Poland":"PL","Portugal":"PT","Puerto Rico":"PR","Qatar":"QA","Romania":"RO","Russia":"RU","Samoa":"WS","San Marino":"SM","Saudi Arabia":"SA","Senegal":"SN","Serbia":"RS","Serbia and Montenegro":"CS","Singapore":"SG","Slovakia":"SK","Slovenia":"SI","Somalia":"SO","South Africa":"ZA","South Korea":"KR","Soviet Union":"SU","Spain":"ES","Sri Lanka":"LK","Suriname":"SR","Swaziland":"SZ","Sweden":"SE","Switzerland":"CH","Syrian Arab Republic":"SY","Taiwan":"TW","Tajikistan":"TJ","Tanzania":"TZ","Thailand":"TH","Togo":"TG","Tunisia":"TN","Turkey":"TR","Turks and Caicos Islands":"TC","US Virgin Islands":"VI","Ukraine":"UA","United Arab Emirates":"AE","United Kingdom":"GB","United States of America":"US","Uruguay":"UY","Uzbekistan":"UZ","Vanuatu":"VU","Venezuela":"VE","Vietnam":"VN","Yemen":"YE","Yugoslavia":"YU","Zambia":"ZM","Zimbabwe":"ZW"
-        };
-
-        populateCountryDropdown();
-
-        function initLocalDB() {
-            const request = indexedDB.open("AthenaVaultDB", 1);
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains("json_store")) {
-                    db.createObjectStore("json_store", { keyPath: "id" });
-                }
-            };
-            request.onsuccess = (e) => {
-                try {
-                    const db = e.target.result;
-                    const tx = db.transaction("json_store", "readonly");
-                    const store = tx.objectStore("json_store");
-                    const getReq = store.get("master_db");
-                    getReq.onsuccess = (ev) => { 
-                        if (ev.target.result && ev.target.result.data) { 
-                            localDB = ev.target.result.data; 
-                            updateDbStatus(); 
-                        }
-                        populateCountryDropdown();
-                    };
-                } catch(err) {
-                    populateCountryDropdown();
-                }
-            };
-        }
-        initLocalDB();
-
-        function loadLocalDatabase(event) {
-            const file = event.target.files[0];
+        // GESTIONE CARICAMENTO FILE
+        document.getElementById('db-file').addEventListener('change', function(e) {
+            let file = e.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
+            
+            let reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     localDB = JSON.parse(e.target.result);
-                    const request = indexedDB.open("AthenaVaultDB", 1);
-                    request.onupgradeneeded = (ev) => {
-                        const db = ev.target.result;
-                        if (!db.objectStoreNames.contains("json_store")) {
-                            db.createObjectStore("json_store", { keyPath: "id" });
-                        }
-                    };
-                    request.onsuccess = (ev) => {
-                        try {
-                            const db = ev.target.result;
-                            const tx = db.transaction("json_store", "readwrite");
-                            tx.objectStore("json_store").put({ id: "master_db", data: localDB });
-                            tx.oncomplete = () => { updateDbStatus(); populateCountryDropdown(); alert("✅ DB Memorizzato!"); };
-                        } catch (err) { alert("❌ Errore IndexedDB."); }
-                    };
-                } catch (err) { alert("❌ Errore JSON."); }
+                    // Passiamo l'oggetto file alla funzione per leggerne i metadati fisici
+                    updateDbStatus(file);
+                    document.getElementById('results-count').innerText = `Database Caricato: ${localDB.length} record`;
+                } catch(err) {
+                    alert("Errore nel file JSON. Assicurati che sia il file master valido.");
+                }
             };
             reader.readAsText(file);
-        }
+        });
 
-        function updateDbStatus() {
-            const statusDiv = document.getElementById("dbStatus");
-            if (localDB.length === 0) { statusDiv.className = "db-status red"; statusDiv.innerHTML = "🔴 DB: Assente (Solo TMDB)"; return; }
-            let maxDate = "1900-01-01";
-            localDB.forEach(m => { if (m.release_date && m.release_date > maxDate) maxDate = m.release_date; });
-            const formattedDate = maxDate.split('-').reverse().join('/');
-            const diffDays = Math.floor((new Date().getTime() - new Date(maxDate).getTime()) / (1000 * 60 * 60 * 24));
-            statusDiv.className = diffDays <= 21 ? "db-status green" : "db-status red";
-            statusDiv.innerHTML = diffDays <= 21 ? `🟢 DB Allineato (${formattedDate})` : `🔴 Aggiorna DB (${formattedDate})`;
-        }
-
-        function populateCountryDropdown() {
-            const select = document.getElementById('filterCountry');
-            select.innerHTML = '<option value="">Tutte le nazioni</option>';
-            if (localDB.length === 0) {
-                const topCountries = ["United States of America", "Italy", "France", "United Kingdom", "Japan", "South Korea", "Germany", "Spain", "Canada", "Australia", "China", "India", "Brazil", "Mexico", "Argentina", "Sweden", "Denmark", "Russia", "Hong Kong", "Ireland"];
-                topCountries.sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; select.appendChild(opt); });
-                return; 
-            }
-            const countrySet = new Set();
-            localDB.forEach(m => { if (m.paese && m.paese !== "N/D") { m.paese.split(',').forEach(c => { const t = c.trim(); if (t) countrySet.add(t); }); } });
-            Array.from(countrySet).sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; select.appendChild(opt); });
-        }
-
-        function toggleFilters() { document.getElementById("filtersPanel").classList.toggle("active"); }
-        function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
-        async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
-        window.onload = () => { gapi.load('client', intializeGapiClient); };
-        function handleAuthClick() { const tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: async (resp) => { accessToken = resp.access_token; document.getElementById('loginOverlay').style.display = 'none'; await startCloudSync(); } }); tokenClient.requestAccessToken(); }
-        async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
-        async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
-
-        async function fetchTimeMachine() { 
-            const rc = document.getElementById('resultsContainer'); 
-            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">In viaggio...</p>'; 
-            const today = new Date(), past = new Date(); past.setDate(today.getDate() - 180); 
-            try { 
-                const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${past.toISOString().split('T')[0]}&with_release_type=2|3`; 
-                let datasets = [];
-                
-                // BIFORCAZIONE DEL TRAFFICO: Sequenziale per iOS, Simultaneo per PC
-                if (isIOS) {
-                    for (let p = 1; p <= 20; p++) {
-                        try {
-                            const res = await fetch(`${baseUrl}&page=${p}`);
-                            datasets.push(await res.json());
-                        } catch(e) { console.warn(`TMDB limit su pagina ${p}, continuo...`); }
-                    }
-                } else {
-                    const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`))); 
-                    datasets = await Promise.all(responses.map(r => r.json())); 
-                }
-
-                let combined = []; 
-                datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); }); 
-                currentMovieArray = Array.from(new Map(combined.filter(m => m.release_date && new Date(m.release_date) >= past).map(m => [m.id, m])).values()); 
-                renderUI(); 
-            } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; } 
-        }
-
-        async function searchManual() {
-            const query = document.getElementById('manualSearch').value.toLowerCase().trim();
-            const yearFrom = document.getElementById('filterYearFrom').value;
-            const yearTo = document.getElementById('filterYearTo').value;
-            const country = document.getElementById('filterCountry').value;
-            const rc = document.getElementById('resultsContainer');
-            if(!query && !yearFrom && !yearTo && !country) return;
-            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Fusione Database e Rete a Strascico in corso...</p>';
-            let risultati_totali = new Map();
+        // OROLOGIO FISICO E SEMAFORO (Check 15 giorni)
+        function updateDbStatus(file) {
+            if(localDB.length === 0) return;
+            let statusEl = document.getElementById('db-status');
             
-            // LA NUOVA DOGANA INTELLIGENTE (Aggiunto parametro trustTMDB)
-            const validateMovie = (m, trustTMDB = false) => {
-                const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
-                if ((yearFrom || yearTo) && releaseYear === 0) return false;
-                const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
-                const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
+            if(file && file.lastModified) {
+                let fileDate = new Date(file.lastModified);
+                let today = new Date();
                 
-                let matchCountry = false;
-                if (!country) { matchCountry = true; } 
-                else if (m.paese && m.paese !== "N/D") { 
-                    const paesiArray = m.paese.split(',').map(c => c.trim()); 
-                    matchCountry = paesiArray.includes(country); 
-                } 
-                else if (m.origin_country && m.origin_country.length > 0 && COUNTRY_ISO_MAP[country]) { 
-                    matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); 
-                }
-                else if (trustTMDB) { 
-                    matchCountry = true; // IL LASCIAPASSARE: Ci fidiamo del filtro a monte di TMDB
-                }
+                // Calcolo giorni di differenza
+                let diffTime = today.getTime() - fileDate.getTime();
+                let diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
                 
-                return matchYearFrom && matchYearTo && matchCountry;
-            };
+                // Formattazione data italiana (GG/MM/AAAA)
+                let day = String(fileDate.getDate()).padStart(2, '0');
+                let month = String(fileDate.getMonth() + 1).padStart(2, '0');
+                let year = fileDate.getFullYear();
+                let formattedDate = `${day}/${month}/${year}`;
 
-            if (localDB.length > 0) {
-                localDB.forEach(m => {
-                    const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
-                    if (matchText && validateMovie(m, false)) { risultati_totali.set(String(m.id), m); }
-                });
-            }
-            try {
-                let discUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&sort_by=release_date.desc`;
-                if (yearFrom) discUrl += `&release_date.gte=${parseInt(yearFrom)}-01-01`;
-                if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
-                if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
-                
-                if (query) {
-                    const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
-                    const data_movie = await res_movie.json();
-                    // Niente lasciapassare qui: l'API search standard non filtra a monte la nazione
-                    (data_movie.results || []).forEach(m => { if(validateMovie(m, false)) risultati_totali.set(String(m.id), m); });
-                    
-                    const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                    const data_person = await res_person.json();
-                    if (data_person.results && data_person.results.length > 0) {
-                        const p_id = data_person.results[0].id;
-                        let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${p_id}&sort_by=release_date.desc`;
-                        
-                        // AGGIUNTA CHIRURGICA: Applichiamo il filtro nazione anche alla ricerca per Attore/Regista
-                        if (country && COUNTRY_ISO_MAP[country]) url_discover_base += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
-                        
-                        const res_p1 = await fetch(url_discover_base + "&page=1");
-                        const data_p1 = await res_p1.json();
-                        (data_p1.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); // Lasciapassare Attivo!
-                        
-                        const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
-                        if (tot_pages_fetch > 1) {
-                            let pagesData = [];
-                            
-                            // BIFORCAZIONE TRAFFICO PERSONE
-                            if (isIOS) {
-                                for (let p = 2; p <= tot_pages_fetch; p++) {
-                                    try {
-                                        const res = await fetch(url_discover_base + `&page=${p}`);
-                                        pagesData.push(await res.json());
-                                    } catch(e) { console.warn(`TMDB limit persona pagina ${p}`); }
-                                }
-                            } else {
-                                const pagePromises = [];
-                                for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); }
-                                pagesData = await Promise.all(pagePromises);
-                            }
-                            
-                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); // Lasciapassare Attivo!
-                        }
-                    }
+                if (diffDays > 15) {
+                    statusEl.innerText = `🔴 AGGIORNA DB (${formattedDate})`;
+                    statusEl.style.color = "#ff4444"; // Rosso allarme
+                    statusEl.style.fontWeight = "bold";
                 } else {
-                    let datasets = [];
-                    
-                    // BIFORCAZIONE TRAFFICO RICERCA VUOTA
-                    if (isIOS) {
-                        for (let p = 1; p <= 20; p++) {
-                            try {
-                                const res = await fetch(`${discUrl}&page=${p}`);
-                                datasets.push(await res.json());
-                            } catch(e) { console.warn(`TMDB limit scoperta pagina ${p}`); }
-                        }
-                    } else {
-                        const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
-                        datasets = await Promise.all(responses.map(r => r.json()));
-                    }
-                    
-                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); // Lasciapassare Attivo!
+                    statusEl.innerText = `🟢 DB ALLINEATO (${formattedDate})`;
+                    statusEl.style.color = "#4CAF50"; // Verde sicuro
+                    statusEl.style.fontWeight = "normal";
                 }
-            } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
-            
-            currentMovieArray = Array.from(risultati_totali.values());
-            renderUI();
+            } else {
+                 statusEl.innerText = `🟢 DB CARICATO`;
+                 statusEl.style.color = "#4CAF50";
+            }
         }
 
-        function renderUI() {
-            const container = document.getElementById('resultsContainer'); container.innerHTML = '';
-            currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
-            const countMsg = document.createElement('div'); countMsg.style = "text-align:center; color:#aaa; font-size:0.75rem; margin-bottom:10px;";
-            countMsg.textContent = `Risultati estratti: ${currentMovieArray.length}`; container.appendChild(countMsg);
-            const frag = document.createDocumentFragment();
-            const ctrl = document.createElement('div'); ctrl.innerHTML = `<div class="sort-toggle"><div class="sort-btn ${currentSortMode === 'recent' ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI</div><div class="sort-btn ${currentSortMode === 'popular' ? 'active' : ''}" onclick="toggleSort('popular')">🔥 POPOLARITÀ</div></div><div class="view-toggle"><div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div><div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div></div>`;
-            frag.appendChild(ctrl);
-            const wrapper = document.createElement('div'); wrapper.className = currentViewMode === 'grid' ? 'movies-grid' : 'list-view-container';
-            currentMovieArray.forEach(m => {
-                const item = document.createElement('div'); item.className = currentViewMode === 'grid' ? 'grid-item' : 'list-item';
-                item.addEventListener('click', () => openDetails(m.id));
-                if (currentViewMode === 'grid') {
-                    const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
-                    const img = document.createElement('img'); img.className = 'grid-poster'; img.src = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
-                    const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; item.append(b, img, t);
-                } else {
-                    const t = document.createElement('div'); t.className = 'list-title'; t.textContent = m.title;
-                    const d = document.createElement('div'); d.className = 'list-data-dynamic'; d.innerHTML = `${currentSortMode === 'popular' ? '🔥 '+Math.round(m.popularity) : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D')}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span>`;
-                    item.append(t, d);
-                }
-                wrapper.appendChild(item);
+        // MOTORE DI RICERCA IBRIDO E FILTRI AVANZATI
+        function searchManual() {
+            if(localDB.length === 0) {
+                alert("Carica prima il file master JSON.");
+                return;
+            }
+
+            // Lettura filtri
+            let titleQuery = document.getElementById('search-title').value.toLowerCase().trim();
+            let yearQuery = document.getElementById('search-year').value.trim();
+            let directorQuery = document.getElementById('search-director').value.toLowerCase().trim();
+            let actorQuery = document.getElementById('search-actor').value.toLowerCase().trim();
+            let countryQuery = document.getElementById('search-country').value.toLowerCase().trim();
+            let typeQuery = document.getElementById('search-type').value;
+            let genreQuery = document.getElementById('search-genre').value.toLowerCase();
+
+            currentMergedResults.clear();
+
+            // 1. RICERCA LOCALE (Precisione Assoluta)
+            let localResults = localDB.filter(m => {
+                let matchTitle = !titleQuery || (m.title && m.title.toLowerCase().includes(titleQuery));
+                let matchYear = !yearQuery || (m.release_date && m.release_date.startsWith(yearQuery));
+                let matchDirector = !directorQuery || (m.director && m.director.toLowerCase().includes(directorQuery));
+                let matchActor = !actorQuery || (m.cast && m.cast.toLowerCase().includes(actorQuery));
+                let matchCountry = !countryQuery || (m.paese && m.paese.toLowerCase().includes(countryQuery));
+                // Filtri Inclusivi
+                let matchType = !typeQuery || (m.release_type && m.release_type.includes(typeQuery));
+                let matchGenre = !genreQuery || (m.genres && m.genres.toLowerCase().includes(genreQuery));
+
+                return matchTitle && matchYear && matchDirector && matchActor && matchCountry && matchType && matchGenre;
             });
-            frag.appendChild(wrapper); container.appendChild(frag);
+
+            // Aggiungiamo i risultati locali alla Mappa (Timbro: ATHENA)
+            localResults.forEach(m => {
+                m._source = 'ATHENA';
+                currentMergedResults.set(String(m.id), m);
+            });
+
+            // 2. RICERCA TMDB ONLINE (Rete a Strascico - Solo se c'è il Titolo)
+            if (titleQuery) {
+                fetchFromTMDB(titleQuery, yearQuery);
+            } else {
+                renderResults();
+            }
+        }
+
+        async function fetchFromTMDB(query, year) {
+            let url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`;
+            if (year) {
+                url += `&primary_release_year=${year}`;
+            }
+
+            try {
+                document.getElementById('results-count').innerText = "Rete a strascico in corso...";
+                let response = await fetch(url);
+                let data = await response.json();
+                
+                if (data.results) {
+                    data.results.forEach(m => {
+                        let strId = String(m.id);
+                        // Se l'ID non è già stato trovato nel database locale, lo aggiungiamo come "Trovato su TMDB"
+                        if (!currentMergedResults.has(strId)) {
+                            currentMergedResults.set(strId, {
+                                id: strId,
+                                title: m.title,
+                                release_date: m.release_date || "N/D",
+                                poster_path: m.poster_path,
+                                _source: 'TMDB' // Timbro Rete
+                            });
+                        }
+                    });
+                }
+                renderResults();
+            } catch (error) {
+                console.error("Errore TMDB:", error);
+                renderResults(); // Mostriamo almeno i locali in caso di errore rete
+            }
+        }
+
+        function renderResults() {
+            let grid = document.getElementById('results-grid');
+            grid.innerHTML = '';
+            
+            // Convertiamo la Mappa in Array
+            let finalResults = Array.from(currentMergedResults.values());
+            
+            // Ordinamento dal più recente al più vecchio
+            finalResults.sort((a, b) => {
+                let dA = a.release_date || "0000";
+                let dB = b.release_date || "0000";
+                return dB.localeCompare(dA);
+            });
+
+            document.getElementById('results-count').innerText = `Risultati: ${finalResults.length}`;
+
+            finalResults.forEach(m => {
+                let card = document.createElement('div');
+                card.className = 'movie-card';
+                card.onclick = () => openDetails(m.id);
+
+                let posterUrl = m.poster_path 
+                    ? `https://image.tmdb.org/t/p/w300${m.poster_path}` 
+                    : 'https://via.placeholder.com/300x450/2d2d2d/666666?text=No+Poster';
+
+                let year = m.release_date ? m.release_date.split('-')[0] : "N/D";
+                
+                let badge = m._source === 'ATHENA' 
+                    ? `<span class="badge-source badge-local">DATABASE</span>` 
+                    : `<span class="badge-source badge-tmdb">TMDB ONLINE</span>`;
+
+                card.innerHTML = `
+                    <div class="poster-container">
+                        <img class="poster" src="${posterUrl}" loading="lazy" alt="${m.title}">
+                    </div>
+                    <div class="card-info">
+                        <div>
+                            <h3 class="m-title">${m.title}</h3>
+                            <p class="m-meta">${year}</p>
+                        </div>
+                        ${badge}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
         }
 
         async function openDetails(id) {
-            lastScrollPos = window.scrollY;
             let m = localDB.find(x => String(x.id) === String(id));
-            if (!m) {
-                const tmdb = await (await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`)).json();
-                m = { id: tmdb.id, title: tmdb.title, poster_path: tmdb.poster_path, release_date: tmdb.release_date, popularity: tmdb.popularity, overview: tmdb.overview, paese: tmdb.production_countries?.map(c => c.name).join(', ') || "N/D", genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", director: tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D", cast: tmdb.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D" };
+
+            // Caso A: Trovato nel DB Locale (Nessuna chiamata di rete per rispettare la Purity)
+            if (m) {
+                populateModal(m);
+            } 
+            // Caso B: È un film trovato dalla Rete a Strascico TMDB
+            else {
+                document.getElementById('m-title').innerText = "Caricamento dettagli da TMDB...";
+                document.getElementById('modal').style.display = 'flex';
+                
+                try {
+                    let url = `https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,release_dates`;
+                    let response = await fetch(url);
+                    let tmdbData = await response.json();
+                    
+                    // Normalizziamo i dati "al volo" per simulare un oggetto locale
+                    let director = tmdbData.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D";
+                    let cast = tmdbData.credits?.cast?.slice(0, 10).map(a => a.name).join(", ") || "N/D";
+                    let countries = tmdbData.production_countries?.map(c => c.name).join(", ") || "N/D";
+                    let genres = tmdbData.genres?.map(g => g.name).join(", ") || "N/D";
+                    
+                    let tipologie_it = new Set();
+                    if (tmdbData.release_dates && tmdbData.release_dates.results) {
+                        for (let c_data of tmdbData.release_dates.results) {
+                            if (c_data.iso_3166_1 === 'IT') {
+                                for (let rel of c_data.release_dates) {
+                                    if (rel.type) tipologie_it.add(String(rel.type));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    let tipologia_str = tipologie_it.size > 0 ? Array.from(tipologie_it).sort().join(", ") : "N/D";
+
+                    let tempMovieObj = {
+                        title: tmdbData.title,
+                        release_date: tmdbData.release_date,
+                        poster_path: tmdbData.poster_path,
+                        overview: tmdbData.overview,
+                        director: director,
+                        cast: cast,
+                        paese: countries,
+                        genres: genres,
+                        release_type: tipologia_str
+                    };
+                    
+                    populateModal(tempMovieObj);
+                } catch (e) {
+                    console.error("Errore TMDB Detail:", e);
+                    document.getElementById('m-title').innerText = "Errore di connessione.";
+                }
             }
-            const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=No+Poster';
-            document.getElementById('main-db-view').style.display = 'none';
-            const dv = document.getElementById('detail-view'); dv.style.display = 'block'; dv.innerHTML = '';
-            const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; b.onclick = () => { dv.style.display = 'none'; document.getElementById('main-db-view').style.display = 'block'; setTimeout(() => window.scrollTo(0, lastScrollPos), 10); };
-            const c = document.createElement('div'); c.className = 'movie-card';
-            c.innerHTML = `<img src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
-            const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, post, m.release_date);
-            c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
         }
 
-        function switchTab(t, el) { document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); document.getElementById('tab-' + t).classList.add('active'); if(el) el.classList.add('active'); if(t === 'watchlist') renderWatchlist(); window.scrollTo(0, 0); }
-        async function saveToWL(id, title, poster, date) { const s = String(id); let i = currentVault.findIndex(x => String(x.id) === s); if(i !== -1) { currentVault[i].date = date || 'N/D'; } else { currentVault.unshift({id: s, title, poster, date: date || 'N/D'}); } await saveToCloud(); alert("Salvato!"); }
-        function renderWatchlist() { const c = document.getElementById('watchlistContainer'); if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Cassaforte vuota.</p>'; return; } c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}')"><div class="wl-content" onclick="viewFromVault('${m.id}')"><div style="font-weight:700;">${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class="btn-delete-wl" onclick="removeWL('${m.id}')">X</button></div>`).join(''); }
-        function viewFromVault(id) { switchTab('database', document.getElementById('nav-db')); openDetails(id); }
-        async function removeWL(id) { if(confirm("Eliminare?")) { currentVault = currentVault.filter(x => String(x.id) !== String(id)); renderWatchlist(); await saveToCloud(); } }
-        function toggleSort(m) { currentSortMode = m; renderUI(); }
-        function toggleView(m) { currentViewMode = m; renderUI(); }
+        function populateModal(m) {
+            document.getElementById('modal').style.display = 'flex';
+            
+            document.getElementById('m-title').innerText = m.title || "N/D";
+            document.getElementById('m-meta').innerText = `USCITA: ${m.release_date || 'N/D'} • GENERE: ${m.genres || 'N/D'}`;
+            
+            document.getElementById('m-director').innerText = m.director || "N/D";
+            document.getElementById('m-cast').innerText = m.cast || "N/D";
+            document.getElementById('m-country').innerText = m.paese || "N/D";
+            document.getElementById('m-type').innerText = m.release_type || "N/D";
+            
+            document.getElementById('m-overview').innerText = m.overview || "Nessuna trama disponibile in italiano.";
+            
+            let posterUrl = m.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${m.poster_path}` 
+                : 'https://via.placeholder.com/500x750/2d2d2d/666666?text=No+Poster';
+            document.getElementById('m-img').src = posterUrl;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // Chiudi modale cliccando fuori
+        window.onclick = function(event) {
+            let modal = document.getElementById('modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
     </script>
 </body>
 </html>
