@@ -237,7 +237,33 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-        async function fetchTimeMachine() { const rc = document.getElementById('resultsContainer'); rc.innerHTML = '<p style="text-align:center; color:#f5c518;">In viaggio...</p>'; const today = new Date(), past = new Date(); past.setDate(today.getDate() - 180); try { const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${past.toISOString().split('T')[0]}&with_release_type=2|3`; const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`))); const datasets = await Promise.all(responses.map(r => r.json())); let combined = []; datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); }); currentMovieArray = Array.from(new Map(combined.filter(m => m.release_date && new Date(m.release_date) >= past).map(m => [m.id, m])).values()); renderUI(); } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; } }
+        async function fetchTimeMachine() { 
+            const rc = document.getElementById('resultsContainer'); 
+            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">In viaggio...</p>'; 
+            const today = new Date(), past = new Date(); past.setDate(today.getDate() - 180); 
+            try { 
+                const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${past.toISOString().split('T')[0]}&with_release_type=2|3`; 
+                let datasets = [];
+                
+                // BIFORCAZIONE DEL TRAFFICO: Sequenziale per iOS, Simultaneo per PC
+                if (isIOS) {
+                    for (let p = 1; p <= 20; p++) {
+                        try {
+                            const res = await fetch(`${baseUrl}&page=${p}`);
+                            datasets.push(await res.json());
+                        } catch(e) { console.warn(`TMDB limit su pagina ${p}, continuo...`); }
+                    }
+                } else {
+                    const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`))); 
+                    datasets = await Promise.all(responses.map(r => r.json())); 
+                }
+
+                let combined = []; 
+                datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); }); 
+                currentMovieArray = Array.from(new Map(combined.filter(m => m.release_date && new Date(m.release_date) >= past).map(m => [m.id, m])).values()); 
+                renderUI(); 
+            } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; } 
+        }
 
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
@@ -284,15 +310,41 @@
                         (data_p1.results || []).forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); });
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
                         if (tot_pages_fetch > 1) {
-                            const pagePromises = [];
-                            for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); }
-                            const pagesData = await Promise.all(pagePromises);
+                            let pagesData = [];
+                            
+                            // BIFORCAZIONE TRAFFICO PERSONE
+                            if (isIOS) {
+                                for (let p = 2; p <= tot_pages_fetch; p++) {
+                                    try {
+                                        const res = await fetch(url_discover_base + `&page=${p}`);
+                                        pagesData.push(await res.json());
+                                    } catch(e) { console.warn(`TMDB limit persona pagina ${p}`); }
+                                }
+                            } else {
+                                const pagePromises = [];
+                                for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); }
+                                pagesData = await Promise.all(pagePromises);
+                            }
+                            
                             pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); }); });
                         }
                     }
                 } else {
-                    const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
-                    const datasets = await Promise.all(responses.map(r => r.json()));
+                    let datasets = [];
+                    
+                    // BIFORCAZIONE TRAFFICO RICERCA VUOTA
+                    if (isIOS) {
+                        for (let p = 1; p <= 20; p++) {
+                            try {
+                                const res = await fetch(`${discUrl}&page=${p}`);
+                                datasets.push(await res.json());
+                            } catch(e) { console.warn(`TMDB limit scoperta pagina ${p}`); }
+                        }
+                    } else {
+                        const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
+                        datasets = await Promise.all(responses.map(r => r.json()));
+                    }
+                    
                     datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); }); });
                 }
             } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
