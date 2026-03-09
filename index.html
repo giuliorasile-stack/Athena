@@ -64,6 +64,35 @@
         @media (max-width: 768px) {
             .hide-on-mobile { display: none !important; }
         }
+
+        /* INIEZIONE CHIRURGICA 5: Riorganizzazione Layout ESCLUSIVA PER PC (Schermi grandi) */
+        @media (min-width: 769px) {
+            /* Moltiplica le colonne nella griglia di ricerca (da 2 a dinamiche) */
+            .movies-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+            }
+            
+            /* Dettaglio Film: Affianca Locandina (sinistra) e Testo (destra) */
+            .movie-card {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: flex-start;
+            }
+            
+            /* Limita l'elefante: fissa la locandina e blocca la larghezza */
+            .movie-card > img {
+                width: 350px !important;
+                max-width: 40% !important;
+                height: auto;
+                border-right: 1px solid rgba(255,255,255,0.1);
+            }
+            
+            /* Dà respiro al testo di fianco alla locandina */
+            .movie-info {
+                flex: 1;
+                padding: 30px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -280,7 +309,6 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-        // INIEZIONE CHIRURGICA: Modifica Logica Funzione (-30 / +15 Giorni, Solo Tipologia 3)
         async function fetchTimeMachine() { 
             const rc = document.getElementById('resultsContainer'); 
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso (Oggi al Cinema)...</p>'; 
@@ -292,7 +320,6 @@
                 const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${strPast}&release_date.lte=${strFuture}&with_release_type=3`; 
                 let datasets = [];
                 
-                // BIFORCAZIONE DEL TRAFFICO: Sequenziale per iOS, Simultaneo per PC
                 if (isIOS) {
                     for (let p = 1; p <= 20; p++) {
                         try {
