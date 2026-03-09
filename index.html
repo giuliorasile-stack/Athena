@@ -274,21 +274,34 @@
             if(!query && !yearFrom && !yearTo && !country) return;
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Fusione Database e Rete a Strascico in corso...</p>';
             let risultati_totali = new Map();
-            const validateMovie = (m) => {
+            
+            // LA NUOVA DOGANA INTELLIGENTE (Aggiunto parametro trustTMDB)
+            const validateMovie = (m, trustTMDB = false) => {
                 const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
                 if ((yearFrom || yearTo) && releaseYear === 0) return false;
                 const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                 const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
+                
                 let matchCountry = false;
                 if (!country) { matchCountry = true; } 
-                else if (m.paese && m.paese !== "N/D") { const paesiArray = m.paese.split(',').map(c => c.trim()); matchCountry = paesiArray.includes(country); } 
-                else if (m.origin_country && COUNTRY_ISO_MAP[country]) { matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); }
+                else if (m.paese && m.paese !== "N/D") { 
+                    const paesiArray = m.paese.split(',').map(c => c.trim()); 
+                    matchCountry = paesiArray.includes(country); 
+                } 
+                else if (m.origin_country && m.origin_country.length > 0 && COUNTRY_ISO_MAP[country]) { 
+                    matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); 
+                }
+                else if (trustTMDB) { 
+                    matchCountry = true; // IL LASCIAPASSARE: Ci fidiamo del filtro a monte di TMDB
+                }
+                
                 return matchYearFrom && matchYearTo && matchCountry;
             };
+
             if (localDB.length > 0) {
                 localDB.forEach(m => {
                     const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
-                    if (matchText && validateMovie(m)) { risultati_totali.set(String(m.id), m); }
+                    if (matchText && validateMovie(m, false)) { risultati_totali.set(String(m.id), m); }
                 });
             }
             try {
@@ -296,18 +309,26 @@
                 if (yearFrom) discUrl += `&release_date.gte=${parseInt(yearFrom)}-01-01`;
                 if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
+                
                 if (query) {
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
-                    (data_movie.results || []).forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); });
+                    // Niente lasciapassare qui: l'API search standard non filtra a monte la nazione
+                    (data_movie.results || []).forEach(m => { if(validateMovie(m, false)) risultati_totali.set(String(m.id), m); });
+                    
                     const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                     const data_person = await res_person.json();
                     if (data_person.results && data_person.results.length > 0) {
                         const p_id = data_person.results[0].id;
                         let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${p_id}&sort_by=release_date.desc`;
+                        
+                        // AGGIUNTA CHIRURGICA: Applichiamo il filtro nazione anche alla ricerca per Attore/Regista
+                        if (country && COUNTRY_ISO_MAP[country]) url_discover_base += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
+                        
                         const res_p1 = await fetch(url_discover_base + "&page=1");
                         const data_p1 = await res_p1.json();
-                        (data_p1.results || []).forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); });
+                        (data_p1.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); // Lasciapassare Attivo!
+                        
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
                         if (tot_pages_fetch > 1) {
                             let pagesData = [];
@@ -326,7 +347,7 @@
                                 pagesData = await Promise.all(pagePromises);
                             }
                             
-                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); }); });
+                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); // Lasciapassare Attivo!
                         }
                     }
                 } else {
@@ -345,9 +366,10 @@
                         datasets = await Promise.all(responses.map(r => r.json()));
                     }
                     
-                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m)) risultati_totali.set(String(m.id), m); }); });
+                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); // Lasciapassare Attivo!
                 }
             } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
+            
             currentMovieArray = Array.from(risultati_totali.values());
             renderUI();
         }
