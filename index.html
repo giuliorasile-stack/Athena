@@ -45,7 +45,11 @@
         .grid-item { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); position: relative; cursor: pointer; }
         .grid-poster { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; }
         .grid-title { font-size: 0.8rem; font-weight: 700; padding: 8px; text-align: center; }
-        .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); }
+        
+        /* Modifica Chirurgica: Separazione Badge Data (Destra) e Badge Icona (Sinistra) */
+        .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
+        .type-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); font-size: 0.8rem; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
+        
         .list-item { background: #1a1a1a; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-bottom: 6px; cursor: pointer; }
         .list-data-dynamic { color: var(--gold); font-size: 0.75rem; font-weight: 900; font-family: 'Montserrat'; text-align: right; }
         .btn-back { background: #333; color: #fff; width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 800; margin-bottom: 15px; font-size: 0.85rem; cursor: pointer; }
@@ -60,32 +64,23 @@
         .wl-content { flex: 1; cursor: pointer; }
         .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
         
-        /* INIEZIONE CHIRURGICA: Nascondere i filtri se manca il DB locale (Fix iPad) */
         .hide-without-db { display: none !important; }
 
-        /* INIEZIONE CHIRURGICA 5: Riorganizzazione Layout ESCLUSIVA PER PC (Schermi grandi) */
         @media (min-width: 769px) {
-            /* Moltiplica le colonne nella griglia di ricerca (da 2 a dinamiche) */
             .movies-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
             }
-            
-            /* Dettaglio Film: Affianca Locandina (sinistra) e Testo (destra) */
             .movie-card {
                 display: flex !important;
                 flex-direction: row !important;
                 align-items: flex-start;
             }
-            
-            /* Limita l'elefante: fissa la locandina e blocca la larghezza */
             .movie-card > img {
                 width: 350px !important;
                 max-width: 40% !important;
                 height: auto;
                 border-right: 1px solid rgba(255,255,255,0.1);
             }
-            
-            /* Dà respiro al testo di fianco alla locandina */
             .movie-info {
                 flex: 1;
                 padding: 30px !important;
@@ -486,13 +481,18 @@
                 const item = document.createElement('div'); item.className = currentViewMode === 'grid' ? 'grid-item' : 'list-item';
                 item.addEventListener('click', () => openDetails(m.id));
                 const icon = getIcon(m.release_type);
+                
                 if (currentViewMode === 'grid') {
-                    const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = (icon ? icon + ' ' : '') + (currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'));
+                    if (icon) {
+                        const tb = document.createElement('div'); tb.className = 'type-badge'; tb.textContent = icon; item.appendChild(tb);
+                    }
+                    const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
                     const img = document.createElement('img'); img.className = 'grid-poster'; img.src = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
-                    const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; item.append(b, img, t);
+                    const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; 
+                    item.append(b, img, t);
                 } else {
-                    const t = document.createElement('div'); t.className = 'list-title'; t.textContent = m.title;
-                    const d = document.createElement('div'); d.className = 'list-data-dynamic'; d.innerHTML = `${icon ? icon + ' ' : ''}${currentSortMode === 'popular' ? '🔥 '+Math.round(m.popularity) : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D')}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span>`;
+                    const t = document.createElement('div'); t.className = 'list-title'; t.textContent = (icon ? icon + ' ' : '') + m.title;
+                    const d = document.createElement('div'); d.className = 'list-data-dynamic'; d.innerHTML = `${currentSortMode === 'popular' ? '🔥 '+Math.round(m.popularity) : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D')}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span>`;
                     item.append(t, d);
                 }
                 wrapper.appendChild(item);
