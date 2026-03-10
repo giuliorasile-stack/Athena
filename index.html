@@ -643,16 +643,28 @@
                     });
             }
 
-            // IL CACCIATORE ASINCRONO DI PIATTAFORME
+           // IL CACCIATORE ASINCRONO DI PIATTAFORME (COMPLETO)
             const fetchType = m.isTV ? 'tv' : 'movie';
             fetch(`https://api.themoviedb.org/3/${fetchType}/${m.id}/watch/providers?api_key=${TMDB_API_KEY}`)
                 .then(r => r.json())
                 .then(data => {
-                    const itProviders = data.results?.IT?.flatrate;
+                    const itData = data.results?.IT;
                     const pContainer = document.getElementById(`streaming-providers-${m.id}`);
-                    if (pContainer && itProviders && itProviders.length > 0) {
-                        const logos = itProviders.map(p => `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" title="${p.provider_name}" class="provider-logo">`).join('');
-                        pContainer.innerHTML = `<span class="data-label" style="color: var(--green); margin-top: 15px; display: block;">📺 IN STREAMING (ABBONAMENTO)</span><div class="providers-flex">${logos}</div>`;
+                    
+                    if (pContainer && itData) {
+                        let allProviders = [];
+                        // Uniamo Abbonamenti, Gratuiti e Pubblicità (ignorando Noleggio e Acquisto)
+                        if (itData.flatrate) allProviders = allProviders.concat(itData.flatrate);
+                        if (itData.free) allProviders = allProviders.concat(itData.free);
+                        if (itData.ads) allProviders = allProviders.concat(itData.ads);
+                        
+                        // Rimuoviamo i doppioni in caso un provider sia in più categorie
+                        const uniqueProviders = Array.from(new Map(allProviders.map(p => [p.provider_id, p])).values());
+                        
+                        if (uniqueProviders.length > 0) {
+                            const logos = uniqueProviders.map(p => `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" title="${p.provider_name}" class="provider-logo">`).join('');
+                            pContainer.innerHTML = `<span class="data-label" style="color: var(--green); margin-top: 15px; display: block;">📺 IN STREAMING</span><div class="providers-flex">${logos}</div>`;
+                        }
                     }
                 }).catch(() => {});
         }
