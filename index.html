@@ -184,6 +184,21 @@
                     <label>Al (Anno)</label>
                     <input type="number" id="tvFilterYearTo" placeholder="es. 2026">
                 </div>
+                <div class="filter-group">
+                    <label>Paese Produzione</label>
+                    <select id="tvFilterCountry">
+                        <option value="">Tutto il mondo</option>
+                        <option value="IT">Italia (IT)</option>
+                        <option value="US">Stati Uniti (US)</option>
+                        <option value="GB">Regno Unito (GB)</option>
+                        <option value="FR">Francia (FR)</option>
+                        <option value="ES">Spagna (ES)</option>
+                        <option value="DE">Germania (DE)</option>
+                        <option value="JP">Giappone (JP)</option>
+                        <option value="KR">Corea del Sud (KR)</option>
+                        <option value="CN">Cina (CN)</option>
+                    </select>
+                </div>
             </div>
 
             <div id="tvResults"></div>
@@ -316,7 +331,15 @@
         function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; document.getElementById('search-type').selectedIndex = 0; document.getElementById('search-genre').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
         
         function toggleTVFilters() { document.getElementById("tvFiltersPanel").classList.toggle("active"); }
-        function resetTVFilters() { document.getElementById('tvSearch').value = ''; document.getElementById('tvFilterYearFrom').value = ''; document.getElementById('tvFilterYearTo').value = ''; currentMovieArray = []; document.getElementById('tvResults').innerHTML = ''; if (document.getElementById("tvFiltersPanel").classList.contains("active")) toggleTVFilters(); }
+        function resetTVFilters() { 
+            document.getElementById('tvSearch').value = ''; 
+            document.getElementById('tvFilterYearFrom').value = ''; 
+            document.getElementById('tvFilterYearTo').value = ''; 
+            document.getElementById('tvFilterCountry').selectedIndex = 0; // Fix reset paese TV
+            currentMovieArray = []; 
+            document.getElementById('tvResults').innerHTML = ''; 
+            if (document.getElementById("tvFiltersPanel").classList.contains("active")) toggleTVFilters(); 
+        }
 
         async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
         window.onload = () => { gapi.load('client', intializeGapiClient); };
@@ -324,13 +347,14 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-        /* CACCIATORE SERIE TV + GHIGLIOTTINA DEL PRESENTE E VINCOLO ITALIA */
+        /* CACCIATORE SERIE TV + GHIGLIOTTINA DEL PRESENTE + VINCOLO ITALIA + FILTRO GEOGRAFICO */
         async function searchTV() {
             const query = document.getElementById('tvSearch').value.trim();
             const yearFrom = document.getElementById('tvFilterYearFrom').value;
             const yearTo = document.getElementById('tvFilterYearTo').value;
+            const country = document.getElementById('tvFilterCountry').value; // Nuova variabile Paese TV
             
-            if (!query && !yearFrom && !yearTo) return;
+            if (!query && !yearFrom && !yearTo && !country) return;
             const rc = document.getElementById('tvResults');
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca Serie TV in corso...</p>';
             let risultati_totali = new Map();
@@ -355,10 +379,10 @@
                     const todayStr = new Date().toISOString().split('T')[0];
                     const currentYear = new Date().getFullYear();
                     
-                    // Forza la risposta solo se esiste un distributore in Italia (Gratis, Pubblicità o Abbonamento)
                     let discUrl = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&sort_by=popularity.desc&watch_region=IT&with_watch_monetization_types=flatrate|free|ads`;
                     
                     if (yearFrom) discUrl += `&first_air_date.gte=${yearFrom}-01-01`;
+                    if (country) discUrl += `&with_origin_country=${country}`; // Applica la ghigliottina geografica
                     
                     // La Ghigliottina del Presente
                     if (yearTo && parseInt(yearTo) < currentYear) {
@@ -379,7 +403,7 @@
                     datasets.forEach(d => { (d.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); }); });
                 }
 
-                // Filtro Client-Side Temporale per Scremare i risultati "Sporchi" (e distruggere il futuro)
+                // Filtro Client-Side Temporale e Geografico per Scremare i risultati "Sporchi"
                 let filteredResults = Array.from(risultati_totali.values());
                 const todayD = new Date();
                 
@@ -389,14 +413,21 @@
                     
                     // Regola Inviolabile: Nessuna serie TV futura
                     if (releaseDate > todayD) return false;
+
+                    // Filtro Nazione lato Client
+                    let matchCountry = true;
+                    if (country) {
+                        matchCountry = tv.origin_country && tv.origin_country.includes(country);
+                    }
                     
+                    let matchYear = true;
                     if (yearFrom || yearTo) {
                         const releaseYear = parseInt(tv.first_air_date.substring(0,4));
                         const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                         const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
-                        return matchYearFrom && matchYearTo;
+                        matchYear = matchYearFrom && matchYearTo;
                     }
-                    return true;
+                    return matchYear && matchCountry;
                 });
 
                 currentMovieArray = filteredResults.map(tv => ({
