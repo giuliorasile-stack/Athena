@@ -64,30 +64,14 @@
         .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
         
         .hide-without-db { display: none !important; }
-
-        /* INIEZIONE CHIRURGICA: CSS per Piattaforme Streaming */
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
         @media (min-width: 769px) {
-            .movies-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
-            }
-            .movie-card {
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: flex-start;
-            }
-            .movie-card > img {
-                width: 350px !important;
-                max-width: 40% !important;
-                height: auto;
-                border-right: 1px solid rgba(255,255,255,0.1);
-            }
-            .movie-info {
-                flex: 1;
-                padding: 30px !important;
-            }
+            .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
+            .movie-card { display: flex !important; flex-direction: row !important; align-items: flex-start; }
+            .movie-card > img { width: 350px !important; max-width: 40% !important; height: auto; border-right: 1px solid rgba(255,255,255,0.1); }
+            .movie-info { flex: 1; padding: 30px !important; }
         }
     </style>
 </head>
@@ -139,7 +123,6 @@
                         <option value="">Tutte le nazioni</option>
                     </select>
                 </div>
-                
                 <div id="filter-type-group" class="filter-group hide-without-db adv-filter">
                     <label>Tipologia IT</label>
                     <select id="search-type">
@@ -187,9 +170,22 @@
         <div id="main-tv-view">
             <div class="search-container">
                 <input type="text" id="tvSearch" class="search-input" placeholder="Cerca titolo, regista o attore..." onkeypress="if(event.key === 'Enter') searchTV()">
+                <button class="btn-filter" onclick="toggleTVFilters()">⚙️</button>
                 <button class="btn-search" onclick="searchTV()">GO</button>
-                <button class="btn-reset" onclick="document.getElementById('tvSearch').value=''; document.getElementById('tvResults').innerHTML=''">❌</button>
+                <button class="btn-reset" onclick="resetTVFilters()">❌</button>
             </div>
+            
+            <div id="tvFiltersPanel" class="filters-panel">
+                <div class="filter-group">
+                    <label>Dal (Anno)</label>
+                    <input type="number" id="tvFilterYearFrom" placeholder="es. 1990">
+                </div>
+                <div class="filter-group">
+                    <label>Al (Anno)</label>
+                    <input type="number" id="tvFilterYearTo" placeholder="es. 2026">
+                </div>
+            </div>
+
             <div id="tvResults"></div>
         </div>
     </div>
@@ -219,7 +215,7 @@
         let currentVault = []; 
         let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
         let lastScrollPos = 0, localDB = [];
-        let isTVMode = false; // FLAG GLOBALE PER LE SERIE TV
+        let isTVMode = false;
 
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
@@ -242,9 +238,7 @@
             const request = indexedDB.open("AthenaVaultDB", 1);
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
-                if (!db.objectStoreNames.contains("json_store")) {
-                    db.createObjectStore("json_store", { keyPath: "id" });
-                }
+                if (!db.objectStoreNames.contains("json_store")) db.createObjectStore("json_store", { keyPath: "id" });
             };
             request.onsuccess = (e) => {
                 try {
@@ -259,9 +253,7 @@
                         }
                         populateCountryDropdown();
                     };
-                } catch(err) {
-                    populateCountryDropdown();
-                }
+                } catch(err) { populateCountryDropdown(); }
             };
         }
         initLocalDB();
@@ -277,9 +269,7 @@
                     const request = indexedDB.open("AthenaVaultDB", 1);
                     request.onupgradeneeded = (ev) => {
                         const db = ev.target.result;
-                        if (!db.objectStoreNames.contains("json_store")) {
-                            db.createObjectStore("json_store", { keyPath: "id" });
-                        }
+                        if (!db.objectStoreNames.contains("json_store")) db.createObjectStore("json_store", { keyPath: "id" });
                     };
                     request.onsuccess = (ev) => {
                         try {
@@ -297,95 +287,111 @@
         function updateDbStatus(timestamp) {
             const statusDiv = document.getElementById("dbStatus");
             if (localDB.length === 0) { statusDiv.className = "db-status red"; statusDiv.innerHTML = "🔴 DB: Assente (Solo TMDB)"; return; }
-            
             const fileDate = timestamp ? new Date(timestamp) : new Date();
             const formattedDate = fileDate.toLocaleDateString('it-IT');
             const diffDays = Math.floor((new Date().getTime() - fileDate.getTime()) / (1000 * 60 * 60 * 24));
-            
             statusDiv.className = diffDays <= 15 ? "db-status green" : "db-status red";
             statusDiv.innerHTML = diffDays <= 15 ? `🟢 DB Allineato (${formattedDate})` : `🔴 Aggiorna DB (${formattedDate})`;
         }
 
         function populateCountryDropdown() {
-            const select = document.getElementById('filterCountry');
-            select.innerHTML = '<option value="">Tutte le nazioni</option>';
+            const select = document.getElementById('filterCountry'); select.innerHTML = '<option value="">Tutte le nazioni</option>';
             if (localDB.length === 0) {
                 const topCountries = ["United States of America", "Italy", "France", "United Kingdom", "Japan", "South Korea", "Germany", "Spain", "Canada", "Australia", "China", "India", "Brazil", "Mexico", "Argentina", "Sweden", "Denmark", "Russia", "Hong Kong", "Ireland"];
                 topCountries.sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; select.appendChild(opt); });
                 return; 
             }
             const countrySet = new Set();
-            localDB.forEach(m => { if (m.paese && m.paese !== "N/D") { m.paese.split(',').forEach(c => { const t = c.trim(); if (t) countrySet.add(t); }); } });
+            localDB.forEach(m => { if (m.paese && m.paese !== "N/D") m.paese.split(',').forEach(c => { const t = c.trim(); if (t) countrySet.add(t); }); });
             Array.from(countrySet).sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; select.appendChild(opt); });
         }
 
         function toggleFilters() { 
-            const panel = document.getElementById("filtersPanel");
-            panel.classList.toggle("active"); 
-            
-            const isDesktop = window.innerWidth >= 769;
-            const hasDB = localDB.length > 0;
-            const advTypes = document.querySelectorAll('.adv-filter');
-            advTypes.forEach(el => {
-                if (isDesktop && hasDB) el.classList.remove('hide-without-db');
-                else el.classList.add('hide-without-db');
+            const panel = document.getElementById("filtersPanel"); panel.classList.toggle("active"); 
+            const isDesktop = window.innerWidth >= 769; const hasDB = localDB.length > 0;
+            document.querySelectorAll('.adv-filter').forEach(el => {
+                if (isDesktop && hasDB) el.classList.remove('hide-without-db'); else el.classList.add('hide-without-db');
             });
         }
-        
         function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; document.getElementById('search-type').selectedIndex = 0; document.getElementById('search-genre').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
+        
+        function toggleTVFilters() { document.getElementById("tvFiltersPanel").classList.toggle("active"); }
+        function resetTVFilters() { document.getElementById('tvSearch').value = ''; document.getElementById('tvFilterYearFrom').value = ''; document.getElementById('tvFilterYearTo').value = ''; currentMovieArray = []; document.getElementById('tvResults').innerHTML = ''; if (document.getElementById("tvFiltersPanel").classList.contains("active")) toggleTVFilters(); }
+
         async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
         window.onload = () => { gapi.load('client', intializeGapiClient); };
         function handleAuthClick() { const tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: async (resp) => { accessToken = resp.access_token; document.getElementById('loginOverlay').style.display = 'none'; await startCloudSync(); } }); tokenClient.requestAccessToken(); }
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-       /* NUOVA FUNZIONE: Ricerca Serie TV Potenziata (Titolo + Attore + Regista/Creatore) */
+        /* CACCIATORE SERIE TV + APPLICAZIONE FILTRI MISTI */
         async function searchTV() {
             const query = document.getElementById('tvSearch').value.trim();
-            if (!query) return;
+            const yearFrom = document.getElementById('tvFilterYearFrom').value;
+            const yearTo = document.getElementById('tvFilterYearTo').value;
+            
+            if (!query && !yearFrom && !yearTo) return;
             const rc = document.getElementById('tvResults');
-            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca Serie TV e Cast in corso...</p>';
+            rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca Serie TV in corso...</p>';
             let risultati_totali = new Map();
             
             try {
-                // FASE 1: Ricerca pura per Titolo (es. "Sandokan")
-                const res_tv = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                const data_tv = await res_tv.json();
-                (data_tv.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                if (query) {
+                    const res_tv = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
+                    const data_tv = await res_tv.json();
+                    (data_tv.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
 
-                // FASE 2: Ricerca per Persona (Attore o Regista/Ideatore)
-                const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
-                const data_person = await res_person.json();
-                
-                if (data_person.results && data_person.results.length > 0) {
-                    const p_id = data_person.results[0].id; // Prende l'ID esatto della persona
+                    const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
+                    const data_person = await res_person.json();
+                    if (data_person.results && data_person.results.length > 0) {
+                        const p_id = data_person.results[0].id; 
+                        const res_credits = await fetch(`https://api.themoviedb.org/3/person/${p_id}/tv_credits?api_key=${TMDB_API_KEY}&language=it-IT`);
+                        const data_credits = await res_credits.json();
+                        (data_credits.cast || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                        (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                    }
+                } else {
+                    // Ricerca Discovery solo tramite Anni
+                    let discUrl = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&sort_by=popularity.desc`;
+                    if (yearFrom) discUrl += `&first_air_date.gte=${yearFrom}-01-01`;
+                    if (yearTo) discUrl += `&first_air_date.lte=${yearTo}-12-31`;
                     
-                    // Metodo infallibile TMDB per le Serie: Chiedere il Curriculum ("tv_credits")
-                    const res_credits = await fetch(`https://api.themoviedb.org/3/person/${p_id}/tv_credits?api_key=${TMDB_API_KEY}&language=it-IT`);
-                    const data_credits = await res_credits.json();
-                    
-                    // Aggiunge tutte le serie in cui ha recitato (Cast)
-                    (data_credits.cast || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
-                    
-                    // Aggiunge tutte le serie che ha ideato/diretto (Crew)
-                    (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                    let datasets = [];
+                    if (isIOS) {
+                        for (let p = 1; p <= 20; p++) {
+                            try { const res = await fetch(`${discUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { }
+                        }
+                    } else {
+                        const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
+                        datasets = await Promise.all(responses.map(r => r.json()));
+                    }
+                    datasets.forEach(d => { (d.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); }); });
                 }
 
-                // FASE 3: Normalizzazione per usare la stessa identica griglia grafica del Cinema
-                currentMovieArray = Array.from(risultati_totali.values()).map(tv => ({
+                // Filtro Client-Side Temporale per Scremare i risultati "Sporchi"
+                let filteredResults = Array.from(risultati_totali.values());
+                if (query && (yearFrom || yearTo)) {
+                    filteredResults = filteredResults.filter(tv => {
+                        const releaseYear = tv.first_air_date ? parseInt(tv.first_air_date.substring(0,4)) : 0;
+                        if (releaseYear === 0) return false;
+                        const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
+                        const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
+                        return matchYearFrom && matchYearTo;
+                    });
+                }
+
+                currentMovieArray = filteredResults.map(tv => ({
                     id: tv.id,
                     title: tv.name,
                     release_date: tv.first_air_date,
                     poster_path: tv.poster_path,
                     popularity: tv.popularity,
-                    isTV: true // Flag fondamentale per dire all'app che è una serie
+                    isTV: true 
                 }));
-                
                 renderUI(true);
             } catch (e) { rc.innerHTML = '<p style="color:red;">Errore ricerca Serie TV.</p>'; }
         }
 
-        /* FUNZIONE ORIGINALE V9.2 RECUPERATA INTEGRALMENTE (I cicli da 20 pagine sono salvi) */
         async function fetchTimeMachine() { 
             const rc = document.getElementById('resultsContainer'); 
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso (Oggi al Cinema)...</p>'; 
@@ -396,37 +402,29 @@
                 const strFuture = future.toISOString().split('T')[0];
                 const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${strPast}&release_date.lte=${strFuture}&with_release_type=3`; 
                 let datasets = [];
-                
                 if (isIOS) {
                     for (let p = 1; p <= 20; p++) {
-                        try {
-                            const res = await fetch(`${baseUrl}&page=${p}`);
-                            datasets.push(await res.json());
-                        } catch(e) { console.warn(`TMDB limit su pagina ${p}, continuo...`); }
+                        try { const res = await fetch(`${baseUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { console.warn(`TMDB limit su pagina ${p}, continuo...`); }
                     }
                 } else {
                     const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`))); 
                     datasets = await Promise.all(responses.map(r => r.json())); 
                 }
-
                 let combined = []; 
                 datasets.forEach(d => { if(d.results) combined = combined.concat(d.results); }); 
                 currentMovieArray = Array.from(new Map(combined.filter(m => {
                     if (!m.release_date) return false;
-                    const d = new Date(m.release_date);
-                    return d >= past && d <= future;
+                    const d = new Date(m.release_date); return d >= past && d <= future;
                 }).map(m => [m.id, {...m, release_type: "3", isTV: false}])).values()); 
                 renderUI(false); 
             } catch (e) { rc.innerHTML = '<p style="text-align:center; color:var(--red);">Errore scanner.</p>'; } 
         }
 
-        /* FUNZIONE ORIGINALE V9.2 RECUPERATA INTEGRALMENTE */
         async function searchManual() {
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
             const yearTo = document.getElementById('filterYearTo').value;
             const country = document.getElementById('filterCountry').value;
-            
             const typeQuery = document.getElementById('search-type') ? document.getElementById('search-type').value : "";
             const genreQuery = document.getElementById('search-genre') ? document.getElementById('search-genre').value.toLowerCase() : "";
 
@@ -440,23 +438,10 @@
                 if ((yearFrom || yearTo) && releaseYear === 0) return false;
                 const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                 const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
-                
                 let matchCountry = false;
-                if (!country) { matchCountry = true; } 
-                else if (m.paese && m.paese !== "N/D") { 
-                    const paesiArray = m.paese.split(',').map(c => c.trim()); 
-                    matchCountry = paesiArray.includes(country); 
-                } 
-                else if (m.origin_country && m.origin_country.length > 0 && COUNTRY_ISO_MAP[country]) { 
-                    matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); 
-                }
-                else if (trustTMDB) { 
-                    matchCountry = true; 
-                }
-                
+                if (!country) { matchCountry = true; } else if (m.paese && m.paese !== "N/D") { const paesiArray = m.paese.split(',').map(c => c.trim()); matchCountry = paesiArray.includes(country); } else if (m.origin_country && m.origin_country.length > 0 && COUNTRY_ISO_MAP[country]) { matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); } else if (trustTMDB) { matchCountry = true; }
                 const matchType = !typeQuery || (m.release_type && m.release_type.includes(typeQuery));
                 const matchGenre = !genreQuery || (m.genres && m.genres.toLowerCase().includes(genreQuery));
-                
                 return matchYearFrom && matchYearTo && matchCountry && matchType && matchGenre;
             };
 
@@ -482,27 +467,17 @@
                     if (data_person.results && data_person.results.length > 0) {
                         const p_id = data_person.results[0].id;
                         let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${p_id}&sort_by=release_date.desc`;
-                        
                         if (country && COUNTRY_ISO_MAP[country]) url_discover_base += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
-                        
-                        const res_p1 = await fetch(url_discover_base + "&page=1");
-                        const data_p1 = await res_p1.json();
+                        const res_p1 = await fetch(url_discover_base + "&page=1"); const data_p1 = await res_p1.json();
                         (data_p1.results || []).forEach(m => { m.isTV = false; if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); 
                         
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
                         if (tot_pages_fetch > 1) {
                             let pagesData = [];
                             if (isIOS) {
-                                for (let p = 2; p <= tot_pages_fetch; p++) {
-                                    try {
-                                        const res = await fetch(url_discover_base + `&page=${p}`);
-                                        pagesData.push(await res.json());
-                                    } catch(e) { console.warn(`TMDB limit persona pagina ${p}`); }
-                                }
+                                for (let p = 2; p <= tot_pages_fetch; p++) { try { const res = await fetch(url_discover_base + `&page=${p}`); pagesData.push(await res.json()); } catch(e) { } }
                             } else {
-                                const pagePromises = [];
-                                for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); }
-                                pagesData = await Promise.all(pagePromises);
+                                const pagePromises = []; for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); } pagesData = await Promise.all(pagePromises);
                             }
                             pagesData.forEach(pd => { (pd.results || []).forEach(m => { m.isTV = false; if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
                         }
@@ -510,15 +485,9 @@
                 } else {
                     let datasets = [];
                     if (isIOS) {
-                        for (let p = 1; p <= 20; p++) {
-                            try {
-                                const res = await fetch(`${discUrl}&page=${p}`);
-                                datasets.push(await res.json());
-                            } catch(e) { console.warn(`TMDB limit scoperta pagina ${p}`); }
-                        }
+                        for (let p = 1; p <= 20; p++) { try { const res = await fetch(`${discUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { } }
                     } else {
-                        const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
-                        datasets = await Promise.all(responses.map(r => r.json()));
+                        const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`))); datasets = await Promise.all(responses.map(r => r.json()));
                     }
                     datasets.forEach(d => { if(d.results) d.results.forEach(m => { m.isTV = false; if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
                 }
@@ -528,11 +497,9 @@
             renderUI(false);
         }
 
-        /* MODIFICA: renderUI ora sa se deve stampare in TV o nel DB normale */
         function renderUI(forTV = false) {
             const containerId = forTV ? 'tvResults' : 'resultsContainer';
-            const container = document.getElementById(containerId); 
-            container.innerHTML = '';
+            const container = document.getElementById(containerId); container.innerHTML = '';
             
             currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
             const countMsg = document.createElement('div'); countMsg.style = "text-align:center; color:#aaa; font-size:0.75rem; margin-bottom:10px;";
@@ -543,38 +510,24 @@
             const wrapper = document.createElement('div'); wrapper.className = currentViewMode === 'grid' ? 'movies-grid' : 'list-view-container';
             currentMovieArray.forEach(m => {
                 const item = document.createElement('div'); item.className = currentViewMode === 'grid' ? 'grid-item' : 'list-item';
-                // MODIFICA: Passo il parametro isTV
                 item.addEventListener('click', () => openDetails(m.id, m.isTV));
-                
-                // Le Serie TV avranno un'icona forzata 📺 per distinguerle
                 const icon = m.isTV ? "📺" : getIcon(m.release_type);
                 
                 if (currentViewMode === 'grid') {
-                    if (icon) {
-                        const tb = document.createElement('div'); tb.className = 'type-badge'; tb.textContent = icon; item.appendChild(tb);
-                    }
+                    if (icon) { const tb = document.createElement('div'); tb.className = 'type-badge'; tb.textContent = icon; item.appendChild(tb); }
                     const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
                     const img = document.createElement('img'); img.className = 'grid-poster'; 
-                    
                     if (m.poster_path) {
                         img.src = m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path;
                     } else {
                         img.src = 'https://via.placeholder.com/300x450?text=Ricerca...';
                         const year = m.release_date ? m.release_date.split('-')[0] : '';
                         fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.Poster && data.Poster !== 'N/A') {
-                                    img.src = data.Poster;
-                                    m.poster_path = data.Poster; 
-                                } else {
-                                    img.src = 'https://via.placeholder.com/300x450?text=No+Poster';
-                                }
+                            .then(r => r.json()).then(data => {
+                                if (data.Poster && data.Poster !== 'N/A') { img.src = data.Poster; m.poster_path = data.Poster; } else { img.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }
                             }).catch(() => { img.src = 'https://via.placeholder.com/300x450?text=No+Poster'; });
                     }
-
-                    const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; 
-                    item.append(b, img, t);
+                    const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; item.append(b, img, t);
                 } else {
                     const t = document.createElement('div'); t.className = 'list-title'; t.textContent = (icon ? icon + ' ' : '') + m.title;
                     const d = document.createElement('div'); d.className = 'list-data-dynamic'; d.innerHTML = `${currentSortMode === 'popular' ? '🔥 '+Math.round(m.popularity) : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D')}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span>`;
@@ -585,39 +538,20 @@
             frag.appendChild(wrapper); container.appendChild(frag);
         }
 
-        /* FUNZIONE ORIGINALE V9.2 CON INIEZIONI CHIRURGICHE (TV E STREAMING) */
         async function openDetails(id, isTV = false) {
             lastScrollPos = window.scrollY;
             let m;
-            if (!isTV) {
-                m = localDB.find(x => String(x.id) === String(id));
-            }
-            
+            if (!isTV) { m = localDB.find(x => String(x.id) === String(id)); }
             if (!m) {
                 const fetchType = isTV ? 'tv' : 'movie';
                 const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`)).json();
-                
-                // Normalizzazione dei dati TMDB (Serie vs Film)
-                m = { 
-                    id: tmdb.id, 
-                    title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, 
-                    poster_path: tmdb.poster_path, 
-                    release_date: isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date, 
-                    popularity: tmdb.popularity, 
-                    overview: tmdb.overview, 
-                    paese: isTV ? (tmdb.origin_country?.join(', ') || "N/D") : (tmdb.production_countries?.map(c => c.name).join(', ') || "N/D"), 
-                    genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", 
-                    director: isTV ? (tmdb.created_by?.map(c => c.name).join(', ') || "N/D") : (tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D"), 
-                    cast: tmdb.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D",
-                    isTV: isTV
-                };
+                m = { id: tmdb.id, title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, poster_path: tmdb.poster_path, release_date: isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date, popularity: tmdb.popularity, overview: tmdb.overview, paese: isTV ? (tmdb.origin_country?.join(', ') || "N/D") : (tmdb.production_countries?.map(c => c.name).join(', ') || "N/D"), genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", director: isTV ? (tmdb.created_by?.map(c => c.name).join(', ') || "N/D") : (tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D"), cast: tmdb.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D", isTV: isTV };
             }
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
             document.getElementById('main-db-view').style.display = 'none';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'none';
             
-            // Forza la vista sul tab database per mostrare i dettagli in pace
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
             document.getElementById('tab-database').classList.add('active');
 
@@ -626,83 +560,58 @@
             const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; 
             b.onclick = () => { 
                 dv.style.display = 'none'; 
-                if (isTVMode) {
-                    document.getElementById('main-tv-view').style.display = 'block';
-                    switchTab('tv', document.getElementById('nav-tv'));
-                } else {
-                    document.getElementById('main-db-view').style.display = 'block'; 
-                    switchTab('database', document.getElementById('nav-db'));
-                }
+                if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); } 
+                else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
                 setTimeout(() => window.scrollTo(0, lastScrollPos), 10); 
             };
             
             const c = document.createElement('div'); c.className = 'movie-card';
-            
-            // INIEZIONE STREAMING + LABEL DINAMICA REGISTA/CREATORE
             c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
-            
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, m.poster_path || 'https://via.placeholder.com/300x450?text=No+Poster', m.release_date);
             c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
 
-            // IL CACCIATORE ASINCRONO OMDB (RIPRISTINATO)
             if (!m.poster_path) {
                 const year = m.release_date ? m.release_date.split('-')[0] : '';
-                fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`)
-                    .then(r => r.json())
-                    .then(data => {
-                        const detailImg = document.getElementById(`detail-poster-${m.id}`);
-                        if (detailImg) {
-                            if (data.Poster && data.Poster !== 'N/A') {
-                                detailImg.src = data.Poster;
-                                m.poster_path = data.Poster;
-                            } else {
-                                detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
-                            }
-                        }
-                    }).catch(() => {
-                        const detailImg = document.getElementById(`detail-poster-${m.id}`);
-                        if (detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
-                    });
+                fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`).then(r => r.json()).then(data => {
+                    const detailImg = document.getElementById(`detail-poster-${m.id}`);
+                    if (detailImg) { if (data.Poster && data.Poster !== 'N/A') { detailImg.src = data.Poster; m.poster_path = data.Poster; } else { detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster'; } }
+                }).catch(() => { const detailImg = document.getElementById(`detail-poster-${m.id}`); if (detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster'; });
             }
 
-           // IL CACCIATORE ASINCRONO DI PIATTAFORME (COMPLETO)
             const fetchType = m.isTV ? 'tv' : 'movie';
-            fetch(`https://api.themoviedb.org/3/${fetchType}/${m.id}/watch/providers?api_key=${TMDB_API_KEY}`)
-                .then(r => r.json())
-                .then(data => {
-                    const itData = data.results?.IT;
-                    const pContainer = document.getElementById(`streaming-providers-${m.id}`);
-                    
-                    if (pContainer && itData) {
-                        let allProviders = [];
-                        // Uniamo Abbonamenti, Gratuiti e Pubblicità (ignorando Noleggio e Acquisto)
-                        if (itData.flatrate) allProviders = allProviders.concat(itData.flatrate);
-                        if (itData.free) allProviders = allProviders.concat(itData.free);
-                        if (itData.ads) allProviders = allProviders.concat(itData.ads);
-                        
-                        // Rimuoviamo i doppioni in caso un provider sia in più categorie
-                        const uniqueProviders = Array.from(new Map(allProviders.map(p => [p.provider_id, p])).values());
-                        
-                        if (uniqueProviders.length > 0) {
-                            const logos = uniqueProviders.map(p => `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" title="${p.provider_name}" class="provider-logo">`).join('');
-                            pContainer.innerHTML = `<span class="data-label" style="color: var(--green); margin-top: 15px; display: block;">📺 IN STREAMING</span><div class="providers-flex">${logos}</div>`;
-                        }
+            fetch(`https://api.themoviedb.org/3/${fetchType}/${m.id}/watch/providers?api_key=${TMDB_API_KEY}`).then(r => r.json()).then(data => {
+                const itData = data.results?.IT; const pContainer = document.getElementById(`streaming-providers-${m.id}`);
+                if (pContainer && itData) {
+                    let allProviders = [];
+                    if (itData.flatrate) allProviders = allProviders.concat(itData.flatrate);
+                    if (itData.free) allProviders = allProviders.concat(itData.free);
+                    if (itData.ads) allProviders = allProviders.concat(itData.ads);
+                    const uniqueProviders = Array.from(new Map(allProviders.map(p => [p.provider_id, p])).values());
+                    if (uniqueProviders.length > 0) {
+                        const logos = uniqueProviders.map(p => `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" title="${p.provider_name}" class="provider-logo">`).join('');
+                        pContainer.innerHTML = `<span class="data-label" style="color: var(--green); margin-top: 15px; display: block;">📺 IN STREAMING</span><div class="providers-flex">${logos}</div>`;
                     }
-                }).catch(() => {});
+                }
+            }).catch(() => {});
         }
 
-        /* FUNZIONE ORIGINALE V9.2 RECUPERATA INTEGRALMENTE (Gestione Tab) */
+        /* FIX DI NAVIGAZIONE: RESET FORZATO DELLE VISTE */
         function switchTab(t, el) { 
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); 
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); 
             document.getElementById('tab-' + t).classList.add('active'); 
             if(el) el.classList.add('active'); 
             isTVMode = (t === 'tv');
+
+            // Spegne sempre il Dettaglio e riaccende le schermate principali per sbloccare la UI
+            document.getElementById('detail-view').style.display = 'none';
+            document.getElementById('main-db-view').style.display = 'block';
+            if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'block';
+
             if(t === 'watchlist') renderWatchlist(); 
             window.scrollTo(0, 0); 
         }
 
-        /* FUNZIONI ORIGINALI V9.2 RECUPERATE INTEGRALMENTE (Pulsanti Cancella Salvi) */
         async function saveToWL(id, title, poster, date) { const s = String(id); let i = currentVault.findIndex(x => String(x.id) === s); if(i !== -1) { currentVault[i].date = date || 'N/D'; } else { currentVault.unshift({id: s, title, poster, date: date || 'N/D'}); } await saveToCloud(); alert("Salvato!"); }
         function renderWatchlist() { const c = document.getElementById('watchlistContainer'); if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Cassaforte vuota.</p>'; return; } c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}')"><div class="wl-content" onclick="viewFromVault('${m.id}')"><div style="font-weight:700;">${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class="btn-delete-wl" onclick="removeWL('${m.id}')">X</button></div>`).join(''); }
         function viewFromVault(id) { switchTab('database', document.getElementById('nav-db')); openDetails(id); }
