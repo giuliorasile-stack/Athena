@@ -95,7 +95,7 @@
             <div id="nav-db" class="nav-item active" onclick="switchTab('database', this)">🔍 FILM</div>
             <div id="nav-tv" class="nav-item" onclick="switchTab('tv', this)">📺 SERIE TV</div>
             <div id="nav-cinema" class="nav-item" onclick="switchTab('cinema', this)">🎟️ IN SALA</div>
-            <div id="nav-wl" class="nav-item" onclick="switchTab('watchlist', this)">💾 CASSAFORTE</div>
+            <div id="nav-wl" class="nav-item" onclick="switchTab('watchlist', this)">💾 PREFERITI</div>
         </div>
     </div>
 
@@ -351,7 +351,6 @@
                         (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
                     }
                 } else {
-                    // Ricerca Discovery solo tramite Anni
                     let discUrl = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&sort_by=popularity.desc`;
                     if (yearFrom) discUrl += `&first_air_date.gte=${yearFrom}-01-01`;
                     if (yearTo) discUrl += `&first_air_date.lte=${yearTo}-12-31`;
@@ -368,7 +367,6 @@
                     datasets.forEach(d => { (d.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); }); });
                 }
 
-                // Filtro Client-Side Temporale per Scremare i risultati "Sporchi"
                 let filteredResults = Array.from(risultati_totali.values());
                 if (query && (yearFrom || yearTo)) {
                     filteredResults = filteredResults.filter(tv => {
@@ -567,7 +565,13 @@
             
             const c = document.createElement('div'); c.className = 'movie-card';
             c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
-            const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, m.poster_path || 'https://via.placeholder.com/300x450?text=No+Poster', m.release_date);
+            
+            // PULSANTE SALVATAGGIO CON FIX POSTER ASSOLUTO E PASSAGGIO VARIABILE ISTV
+            const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; 
+            s.onclick = () => { 
+                let finalPoster = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
+                saveToWL(m.id, m.title, finalPoster, m.release_date, m.isTV); 
+            };
             c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
 
             if (!m.poster_path) {
@@ -595,27 +599,48 @@
             }).catch(() => {});
         }
 
-        /* FIX DI NAVIGAZIONE: RESET FORZATO DELLE VISTE */
         function switchTab(t, el) { 
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); 
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); 
             document.getElementById('tab-' + t).classList.add('active'); 
             if(el) el.classList.add('active'); 
             isTVMode = (t === 'tv');
-
-            // Spegne sempre il Dettaglio e riaccende le schermate principali per sbloccare la UI
             document.getElementById('detail-view').style.display = 'none';
             document.getElementById('main-db-view').style.display = 'block';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'block';
-
             if(t === 'watchlist') renderWatchlist(); 
             window.scrollTo(0, 0); 
         }
 
-        async function saveToWL(id, title, poster, date) { const s = String(id); let i = currentVault.findIndex(x => String(x.id) === s); if(i !== -1) { currentVault[i].date = date || 'N/D'; } else { currentVault.unshift({id: s, title, poster, date: date || 'N/D'}); } await saveToCloud(); alert("Salvato!"); }
-        function renderWatchlist() { const c = document.getElementById('watchlistContainer'); if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Cassaforte vuota.</p>'; return; } c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}')"><div class="wl-content" onclick="viewFromVault('${m.id}')"><div style="font-weight:700;">${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class="btn-delete-wl" onclick="removeWL('${m.id}')">X</button></div>`).join(''); }
-        function viewFromVault(id) { switchTab('database', document.getElementById('nav-db')); openDetails(id); }
-        async function removeWL(id) { if(confirm("Eliminare?")) { currentVault = currentVault.filter(x => String(x.id) !== String(id)); renderWatchlist(); await saveToCloud(); } }
+        /* FIX PREFERITI: Memoria del DNA (Film o TV?) e Link Poster Assoluti */
+        async function saveToWL(id, title, poster, date, isTV) { 
+            const s = String(id); const isSeries = isTV || false;
+            let i = currentVault.findIndex(x => String(x.id) === s && (x.isTV || false) === isSeries); 
+            if(i !== -1) { currentVault[i].date = date || 'N/D'; currentVault[i].poster = poster; } 
+            else { currentVault.unshift({id: s, title, poster, date: date || 'N/D', isTV: isSeries}); } 
+            await saveToCloud(); alert("Aggiunto ai Preferiti!"); 
+        }
+        
+        function renderWatchlist() { 
+            const c = document.getElementById('watchlistContainer'); 
+            if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Nessun preferito.</p>'; return; } 
+            c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div class="wl-content" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div style="font-weight:700;">${m.isTV ? '📺 ' : ''}${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class="btn-delete-wl" onclick="removeWL('${m.id}', ${m.isTV || false})">X</button></div>`).join(''); 
+        }
+        
+        function viewFromVault(id, isTV) { 
+            if (isTV) { switchTab('tv', document.getElementById('nav-tv')); } 
+            else { switchTab('database', document.getElementById('nav-db')); }
+            openDetails(id, isTV); 
+        }
+        
+        async function removeWL(id, isTV) { 
+            if(confirm("Rimuovere dai preferiti?")) { 
+                const isSeries = isTV || false;
+                currentVault = currentVault.filter(x => !(String(x.id) === String(id) && (x.isTV || false) === isSeries)); 
+                renderWatchlist(); await saveToCloud(); 
+            } 
+        }
+
         function toggleSort(m) { currentSortMode = m; renderUI(isTVMode); }
         function toggleView(m) { currentViewMode = m; renderUI(isTVMode); }
     </script>
