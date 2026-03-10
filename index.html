@@ -46,6 +46,7 @@
         .grid-poster { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; }
         .grid-title { font-size: 0.8rem; font-weight: 700; padding: 8px; text-align: center; }
         
+        /* Modifica Chirurgica: Separazione Badge Data (Destra) e Badge Icona (Sinistra) */
         .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
         .type-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); font-size: 0.8rem; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
         
@@ -64,6 +65,10 @@
         .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
         
         .hide-without-db { display: none !important; }
+
+        /* INIEZIONE CHIRURGICA: CSS per Watch Providers (Loghi Piattaforme Streaming) */
+        .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
         @media (min-width: 769px) {
             .movies-grid {
@@ -410,7 +415,6 @@
                 if (query) {
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
-                    /* FIX SOVRASCRITTURA: Inseriamo il dato TMDB solo se il minatore JSON non l'aveva già salvato in precedenza */
                     (data_movie.results || []).forEach(m => { if(validateMovie(m, false) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); });
                     
                     const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
@@ -423,7 +427,6 @@
                         
                         const res_p1 = await fetch(url_discover_base + "&page=1");
                         const data_p1 = await res_p1.json();
-                        /* FIX SOVRASCRITTURA */
                         (data_p1.results || []).forEach(m => { if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); 
                         
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
@@ -443,7 +446,6 @@
                                 pagesData = await Promise.all(pagePromises);
                             }
                             
-                            /* FIX SOVRASCRITTURA */
                             pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
                         }
                     }
@@ -462,7 +464,6 @@
                         datasets = await Promise.all(responses.map(r => r.json()));
                     }
                     
-                    /* FIX SOVRASCRITTURA */
                     datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
                 }
             } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
@@ -492,7 +493,6 @@
                     const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
                     const img = document.createElement('img'); img.className = 'grid-poster'; 
                     
-                    /* FIX OMDB ASINCRONO: Recupero immagini mancanti in background */
                     if (m.poster_path) {
                         img.src = m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path;
                     } else {
@@ -535,13 +535,12 @@
             const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; b.onclick = () => { dv.style.display = 'none'; document.getElementById('main-db-view').style.display = 'block'; setTimeout(() => window.scrollTo(0, lastScrollPos), 10); };
             const c = document.createElement('div'); c.className = 'movie-card';
             
-            /* FIX OMDB ASINCRONO: Creiamo l'immagine con ID per aggiornarla in diretta se serve */
-            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
+            /* INIEZIONE CHIRURGICA: Inserimento del div 'streaming-providers-${m.id}' sotto il Cast Principale */
+            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, m.poster_path || 'https://via.placeholder.com/300x450?text=No+Poster', m.release_date);
             c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
 
-            /* Innesco del Cacciatore Invisibile per la locandina nel dettaglio */
             if (!m.poster_path) {
                 const year = m.release_date ? m.release_date.split('-')[0] : '';
                 fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`)
@@ -561,6 +560,18 @@
                         if (detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
                     });
             }
+
+            /* FIX STREAMING: Cacciatore Asincrono per Piattaforme Streaming (Sempre Aggiornate) */
+            fetch(`https://api.themoviedb.org/3/movie/${m.id}/watch/providers?api_key=${TMDB_API_KEY}`)
+                .then(r => r.json())
+                .then(data => {
+                    const itProviders = data.results?.IT?.flatrate;
+                    const pContainer = document.getElementById(`streaming-providers-${m.id}`);
+                    if (pContainer && itProviders && itProviders.length > 0) {
+                        const logos = itProviders.map(p => `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" title="${p.provider_name}" class="provider-logo">`).join('');
+                        pContainer.innerHTML = `<span class="data-label" style="color: var(--green); margin-top: 15px; display: block;">📺 IN STREAMING (ABBONAMENTO)</span><div class="providers-flex">${logos}</div>`;
+                    }
+                }).catch(() => {});
         }
 
         function switchTab(t, el) { document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); document.getElementById('tab-' + t).classList.add('active'); if(el) el.classList.add('active'); if(t === 'watchlist') renderWatchlist(); window.scrollTo(0, 0); }
