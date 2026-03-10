@@ -563,8 +563,44 @@
             if (!isTV) { m = localDB.find(x => String(x.id) === String(id)); }
             if (!m) {
                 const fetchType = isTV ? 'tv' : 'movie';
-                const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`)).json();
-                m = { id: tmdb.id, title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, poster_path: tmdb.poster_path, release_date: isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date, popularity: tmdb.popularity, overview: tmdb.overview, paese: isTV ? (tmdb.origin_country?.join(', ') || "N/D") : (tmdb.production_countries?.map(c => c.name).join(', ') || "N/D"), genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", director: isTV ? (tmdb.created_by?.map(c => c.name).join(', ') || "N/D") : (tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D"), cast: tmdb.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D", isTV: isTV };
+                
+                // CEROTTO ANTI-BUCHI: Inserito aggregate_credits per pescare attori e registi nascosti negli episodi TV
+                const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits`)).json();
+                
+                // LOGICA ANTI-BUCHI PER REGIA E CREATORE
+                let finalDirector = "N/D";
+                if (isTV) {
+                    if (tmdb.created_by && tmdb.created_by.length > 0) {
+                        finalDirector = tmdb.created_by.map(c => c.name).join(', ');
+                    } else if (tmdb.aggregate_credits?.crew) {
+                        let dir = tmdb.aggregate_credits.crew.find(p => p.job === 'Director' || p.department === 'Directing');
+                        if (dir) finalDirector = dir.name;
+                    }
+                } else {
+                    finalDirector = tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D";
+                }
+
+                // LOGICA ANTI-BUCHI PER IL CAST
+                let finalCast = "N/D";
+                if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) {
+                    finalCast = tmdb.credits.cast.slice(0, 5).map(a => a.name).join(', ');
+                } else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) {
+                    finalCast = tmdb.aggregate_credits.cast.slice(0, 5).map(a => a.name).join(', ');
+                }
+
+                m = { 
+                    id: tmdb.id, 
+                    title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, 
+                    poster_path: tmdb.poster_path, 
+                    release_date: isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date, 
+                    popularity: tmdb.popularity, 
+                    overview: tmdb.overview, 
+                    paese: tmdb.production_countries?.map(c => c.name).join(', ') || "N/D", 
+                    genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", 
+                    director: finalDirector, 
+                    cast: finalCast, 
+                    isTV: isTV 
+                };
             }
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
@@ -587,7 +623,6 @@
             const c = document.createElement('div'); c.className = 'movie-card';
             c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             
-            // PULSANTE SALVATAGGIO CON FIX POSTER ASSOLUTO E PASSAGGIO VARIABILE ISTV
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; 
             s.onclick = () => { 
                 let finalPoster = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
