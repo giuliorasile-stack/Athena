@@ -46,7 +46,6 @@
         .grid-poster { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; }
         .grid-title { font-size: 0.8rem; font-weight: 700; padding: 8px; text-align: center; }
         
-        /* Modifica Chirurgica: Separazione Badge Data (Destra) e Badge Icona (Sinistra) */
         .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
         .type-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); font-size: 0.8rem; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
         
@@ -411,7 +410,8 @@
                 if (query) {
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
-                    (data_movie.results || []).forEach(m => { if(validateMovie(m, false)) risultati_totali.set(String(m.id), m); });
+                    /* FIX SOVRASCRITTURA: Inseriamo il dato TMDB solo se il minatore JSON non l'aveva già salvato in precedenza */
+                    (data_movie.results || []).forEach(m => { if(validateMovie(m, false) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); });
                     
                     const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                     const data_person = await res_person.json();
@@ -423,7 +423,8 @@
                         
                         const res_p1 = await fetch(url_discover_base + "&page=1");
                         const data_p1 = await res_p1.json();
-                        (data_p1.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); 
+                        /* FIX SOVRASCRITTURA */
+                        (data_p1.results || []).forEach(m => { if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); 
                         
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
                         if (tot_pages_fetch > 1) {
@@ -442,7 +443,8 @@
                                 pagesData = await Promise.all(pagePromises);
                             }
                             
-                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); 
+                            /* FIX SOVRASCRITTURA */
+                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
                         }
                     }
                 } else {
@@ -460,7 +462,8 @@
                         datasets = await Promise.all(responses.map(r => r.json()));
                     }
                     
-                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true)) risultati_totali.set(String(m.id), m); }); }); 
+                    /* FIX SOVRASCRITTURA */
+                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
                 }
             } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
             
@@ -487,7 +490,26 @@
                         const tb = document.createElement('div'); tb.className = 'type-badge'; tb.textContent = icon; item.appendChild(tb);
                     }
                     const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
-                    const img = document.createElement('img'); img.className = 'grid-poster'; img.src = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
+                    const img = document.createElement('img'); img.className = 'grid-poster'; 
+                    
+                    /* FIX OMDB ASINCRONO: Recupero immagini mancanti in background */
+                    if (m.poster_path) {
+                        img.src = m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path;
+                    } else {
+                        img.src = 'https://via.placeholder.com/300x450?text=Ricerca...';
+                        const year = m.release_date ? m.release_date.split('-')[0] : '';
+                        fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.Poster && data.Poster !== 'N/A') {
+                                    img.src = data.Poster;
+                                    m.poster_path = data.Poster; 
+                                } else {
+                                    img.src = 'https://via.placeholder.com/300x450?text=No+Poster';
+                                }
+                            }).catch(() => { img.src = 'https://via.placeholder.com/300x450?text=No+Poster'; });
+                    }
+
                     const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; 
                     item.append(b, img, t);
                 } else {
@@ -507,14 +529,38 @@
                 const tmdb = await (await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits`)).json();
                 m = { id: tmdb.id, title: tmdb.title, poster_path: tmdb.poster_path, release_date: tmdb.release_date, popularity: tmdb.popularity, overview: tmdb.overview, paese: tmdb.production_countries?.map(c => c.name).join(', ') || "N/D", genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", director: tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D", cast: tmdb.credits?.cast?.slice(0, 5).map(a => a.name).join(', ') || "N/D" };
             }
-            const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=No+Poster';
+            const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
             document.getElementById('main-db-view').style.display = 'none';
             const dv = document.getElementById('detail-view'); dv.style.display = 'block'; dv.innerHTML = '';
             const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; b.onclick = () => { dv.style.display = 'none'; document.getElementById('main-db-view').style.display = 'block'; setTimeout(() => window.scrollTo(0, lastScrollPos), 10); };
             const c = document.createElement('div'); c.className = 'movie-card';
-            c.innerHTML = `<img src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
-            const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, post, m.release_date);
+            
+            /* FIX OMDB ASINCRONO: Creiamo l'immagine con ID per aggiornarla in diretta se serve */
+            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">Regia</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
+            
+            const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; s.onclick = () => saveToWL(m.id, m.title, m.poster_path || 'https://via.placeholder.com/300x450?text=No+Poster', m.release_date);
             c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
+
+            /* Innesco del Cacciatore Invisibile per la locandina nel dettaglio */
+            if (!m.poster_path) {
+                const year = m.release_date ? m.release_date.split('-')[0] : '';
+                fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const detailImg = document.getElementById(`detail-poster-${m.id}`);
+                        if (detailImg) {
+                            if (data.Poster && data.Poster !== 'N/A') {
+                                detailImg.src = data.Poster;
+                                m.poster_path = data.Poster;
+                            } else {
+                                detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
+                            }
+                        }
+                    }).catch(() => {
+                        const detailImg = document.getElementById(`detail-poster-${m.id}`);
+                        if (detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
+                    });
+            }
         }
 
         function switchTab(t, el) { document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); document.getElementById('tab-' + t).classList.add('active'); if(el) el.classList.add('active'); if(t === 'watchlist') renderWatchlist(); window.scrollTo(0, 0); }
