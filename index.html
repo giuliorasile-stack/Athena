@@ -108,7 +108,7 @@
             <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadLocalDatabase(event)">
         </div>
         <div class="top-nav">
-            <div id="nav-db" class="nav-item active" onclick="switchTab('database', this)">🔍 DATABASE</div>
+            <div id="nav-db" class="nav-item active" onclick="switchTab('database', this)">🔍 FILM</div>
             <div id="nav-tv" class="nav-item" onclick="switchTab('tv', this)">📺 SERIE TV</div>
             <div id="nav-cinema" class="nav-item" onclick="switchTab('cinema', this)">🎟️ IN SALA</div>
             <div id="nav-wl" class="nav-item" onclick="switchTab('watchlist', this)">💾 CASSAFORTE</div>
@@ -186,7 +186,7 @@
     <div id="tab-tv" class="tab-content">
         <div id="main-tv-view">
             <div class="search-container">
-                <input type="text" id="tvSearch" class="search-input" placeholder="Cerca serie TV (es. Sandokan)..." onkeypress="if(event.key === 'Enter') searchTV()">
+                <input type="text" id="tvSearch" class="search-input" placeholder="Cerca titolo, regista o attore..." onkeypress="if(event.key === 'Enter') searchTV()">
                 <button class="btn-search" onclick="searchTV()">GO</button>
                 <button class="btn-reset" onclick="document.getElementById('tvSearch').value=''; document.getElementById('tvResults').innerHTML=''">❌</button>
             </div>
@@ -339,7 +339,7 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-       /* NUOVA FUNZIONE: Ricerca Serie TV Potenziata (Titolo + Attore) */
+       /* NUOVA FUNZIONE: Ricerca Serie TV Potenziata (Titolo + Attore + Regista/Creatore) */
         async function searchTV() {
             const query = document.getElementById('tvSearch').value.trim();
             if (!query) return;
@@ -348,34 +348,37 @@
             let risultati_totali = new Map();
             
             try {
-                // FASE 1: Ricerca per Titolo (es. "Sandokan")
+                // FASE 1: Ricerca pura per Titolo (es. "Sandokan")
                 const res_tv = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                 const data_tv = await res_tv.json();
                 (data_tv.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
 
-                // FASE 2: Ricerca per Persona/Attore (es. "Bryan Cranston")
+                // FASE 2: Ricerca per Persona (Attore o Regista/Ideatore)
                 const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                 const data_person = await res_person.json();
                 
                 if (data_person.results && data_person.results.length > 0) {
-                    const p_id = data_person.results[0].id; // Prende l'ID dell'attore
+                    const p_id = data_person.results[0].id; // Prende l'ID esatto della persona
                     
-                    // Chiede a TMDB: Dammi tutte le serie TV in cui compare questo ID
-                    const url_discover_tv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&with_cast=${p_id}&sort_by=popularity.desc`;
-                    const res_p1 = await fetch(url_discover_tv);
-                    const data_p1 = await res_p1.json();
+                    // Metodo infallibile TMDB per le Serie: Chiedere il Curriculum ("tv_credits")
+                    const res_credits = await fetch(`https://api.themoviedb.org/3/person/${p_id}/tv_credits?api_key=${TMDB_API_KEY}&language=it-IT`);
+                    const data_credits = await res_credits.json();
                     
-                    (data_p1.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                    // Aggiunge tutte le serie in cui ha recitato (Cast)
+                    (data_credits.cast || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                    
+                    // Aggiunge tutte le serie che ha ideato/diretto (Crew)
+                    (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
                 }
 
-                // Normalizzazione per usare la stessa identica griglia grafica del Cinema
+                // FASE 3: Normalizzazione per usare la stessa identica griglia grafica del Cinema
                 currentMovieArray = Array.from(risultati_totali.values()).map(tv => ({
                     id: tv.id,
                     title: tv.name,
                     release_date: tv.first_air_date,
                     poster_path: tv.poster_path,
                     popularity: tv.popularity,
-                    isTV: true // Flag fondamentale
+                    isTV: true // Flag fondamentale per dire all'app che è una serie
                 }));
                 
                 renderUI(true);
