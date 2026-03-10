@@ -324,7 +324,7 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-        /* CACCIATORE SERIE TV + APPLICAZIONE FILTRI MISTI */
+        /* CACCIATORE SERIE TV + GHIGLIOTTINA DEL PRESENTE E VINCOLO ITALIA */
         async function searchTV() {
             const query = document.getElementById('tvSearch').value.trim();
             const yearFrom = document.getElementById('tvFilterYearFrom').value;
@@ -351,9 +351,21 @@
                         (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
                     }
                 } else {
-                    let discUrl = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&sort_by=popularity.desc`;
+                    // IL RADAR BLOCCATO AL PRESENTE E ALL'ITALIA
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const currentYear = new Date().getFullYear();
+                    
+                    // Forza la risposta solo se esiste un distributore in Italia (Gratis, Pubblicità o Abbonamento)
+                    let discUrl = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&sort_by=popularity.desc&watch_region=IT&with_watch_monetization_types=flatrate|free|ads`;
+                    
                     if (yearFrom) discUrl += `&first_air_date.gte=${yearFrom}-01-01`;
-                    if (yearTo) discUrl += `&first_air_date.lte=${yearTo}-12-31`;
+                    
+                    // La Ghigliottina del Presente
+                    if (yearTo && parseInt(yearTo) < currentYear) {
+                        discUrl += `&first_air_date.lte=${yearTo}-12-31`;
+                    } else {
+                        discUrl += `&first_air_date.lte=${todayStr}`;
+                    }
                     
                     let datasets = [];
                     if (isIOS) {
@@ -367,16 +379,25 @@
                     datasets.forEach(d => { (d.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); }); });
                 }
 
+                // Filtro Client-Side Temporale per Scremare i risultati "Sporchi" (e distruggere il futuro)
                 let filteredResults = Array.from(risultati_totali.values());
-                if (query && (yearFrom || yearTo)) {
-                    filteredResults = filteredResults.filter(tv => {
-                        const releaseYear = tv.first_air_date ? parseInt(tv.first_air_date.substring(0,4)) : 0;
-                        if (releaseYear === 0) return false;
+                const todayD = new Date();
+                
+                filteredResults = filteredResults.filter(tv => {
+                    if (!tv.first_air_date) return false;
+                    const releaseDate = new Date(tv.first_air_date);
+                    
+                    // Regola Inviolabile: Nessuna serie TV futura
+                    if (releaseDate > todayD) return false;
+                    
+                    if (yearFrom || yearTo) {
+                        const releaseYear = parseInt(tv.first_air_date.substring(0,4));
                         const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                         const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
                         return matchYearFrom && matchYearTo;
-                    });
-                }
+                    }
+                    return true;
+                });
 
                 currentMovieArray = filteredResults.map(tv => ({
                     id: tv.id,
