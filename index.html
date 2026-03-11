@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.4 Ibrida</title>
+    <title>Athena Lab V9.5 Ibrida</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -67,7 +67,6 @@
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
-        /* NUOVI STILI PER LA GALLERIA CAST */
         .cast-text-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .cast-tag { background: #222; color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; border: 1px solid #444; transition: all 0.2s; }
         .cast-tag:hover { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
@@ -77,12 +76,15 @@
         .cast-img { width: 100%; height: 135px; object-fit: cover; display: block; }
         .cast-name-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); color: white; font-size: 0.65rem; text-align: center; padding: 6px 2px; font-weight: 700; box-sizing: border-box; }
 
+        .rating-stars { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
+        .stars-visual { color: var(--gold); font-size: 1.1rem; letter-spacing: 2px; }
+        .stars-text { font-size: 0.75rem; color: #aaa; font-family: 'Montserrat'; font-weight: 700; margin-left: 5px; }
+
         @media (min-width: 769px) {
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
             .movie-card { display: flex !important; flex-direction: row !important; align-items: flex-start; }
             .movie-card > img { width: 350px !important; max-width: 40% !important; height: auto; border-right: 1px solid rgba(255,255,255,0.1); }
             .movie-info { flex: 1; padding: 30px !important; }
-            /* SU PC MOSTRO LE FOTO E NASCONDO I BOTTONI */
             .cast-text-list { display: none; }
             .cast-gallery { display: flex; }
         }
@@ -91,7 +93,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.4</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.5</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -256,6 +258,18 @@
             return "";
         }
 
+        // GENERATORE DI STELLINE E VOTO
+        function getStarRatingHtml(ratingStr, source) {
+            if(!ratingStr || ratingStr === 'N/A' || ratingStr == 0) return '';
+            const r = parseFloat(ratingStr);
+            const fullStars = Math.round(r / 2);
+            let stars = '';
+            for(let i=1; i<=5; i++) {
+                stars += i <= fullStars ? '★' : '☆';
+            }
+            return `<div class="rating-stars"><span class="stars-visual">${stars}</span> <span class="stars-text">${ratingStr}/10 ${source}</span></div>`;
+        }
+
         const COUNTRY_ISO_MAP = {
             "Afghanistan":"AF","Albania":"AL","Algeria":"DZ","American Samoa":"AS","Angola":"AO","Argentina":"AR","Armenia":"AM","Australia":"AU","Austria":"AT","Azerbaijan":"AZ","Bahamas":"BS","Bangladesh":"BD","Belarus":"BY","Belgium":"BE","Benin":"BJ","Bhutan":"BT","Bolivia":"BO","Bosnia and Herzegovina":"BA","Botswana":"BW","Brazil":"BR","Bulgaria":"BG","Burkina Faso":"BF","Cambodia":"KH","Cameroon":"CM","Canada":"CA","Cape Verde":"CV","Cayman Islands":"KY","Central African Republic":"CF","Chad":"TD","Chile":"CL","China":"CN","Colombia":"CO","Congo":"CG","Costa Rica":"CR","Cote D'Ivoire":"CI","Croatia":"HR","Cuba":"CU","Cyprus":"CY","Czech Republic":"CZ","Czechoslovakia":"XC","Denmark":"DK","Dominican Republic":"DO","East Germany":"XG","Ecuador":"EC","Egypt":"EG","Estonia":"EE","Ethiopia":"ET","Faeroe Islands":"FO","Finland":"FI","France":"FR","French Polynesia":"PF","Gabon":"GA","Georgia":"GE","Germany":"DE","Ghana":"GH","Gibraltar":"GI","Greece":"GR","Greenland":"GL","Guadaloupe":"GP","Guatemala":"GT","Guinea-Bissau":"GW","Haiti":"HT","Holy See":"VA","Honduras":"HN","Hong Kong":"HK","Hungary":"HU","Iceland":"IS","India":"IN","Indonesia":"ID","Iran":"IR","Iraq":"IQ","Ireland":"IE","Israel":"IL","Italy":"IT","Jamaica":"JM","Japan":"JP","Jordan":"JO","Kazakhstan":"KZ","Kenya":"KE","Kiribati":"KI","Kosovo":"XK","Kuwait":"KW","Kyrgyz Republic":"KG","Lao People's Democratic Republic":"LA","Latvia":"LV","Lebanon":"LB","Libyan Arab Jamahiriya":"LY","Liechtenstein":"LI","Lithuania":"LT","Luxembourg":"LU","Macao":"MO","Macedonia":"MK","Malaysia":"MY","Mali":"ML","Malta":"MT","Mauritania":"MR","Mexico":"MX","Moldova":"MD","Monaco":"MC","Mongolia":"MN","Montenegro":"ME","Morocco":"MA","Myanmar":"MM","Namibia":"NA","Nepal":"NP","Netherlands":"NL","Netherlands Antilles":"AN","New Zealand":"NZ","Nicaragua":"NI","Niger":"NE","Nigeria":"NG","North Korea":"KP","Norway":"NO","Pakistan":"PK","Palestinian Territory":"PS","Panama":"PA","Paraguay":"PY","Peru":"PE","Philippines":"PH","Poland":"PL","Portugal":"PT","Puerto Rico":"PR","Qatar":"QA","Romania":"RO","Russia":"RU","Samoa":"WS","San Marino":"SM","Saudi Arabia":"SA","Senegal":"SN","Serbia":"RS","Serbia and Montenegro":"CS","Singapore":"SG","Slovakia":"SK","Slovenia":"SI","Somalia":"SO","South Africa":"ZA","South Korea":"KR","Soviet Union":"SU","Spain":"ES","Sri Lanka":"LK","Suriname":"SR","Swaziland":"SZ","Sweden":"SE","Switzerland":"CH","Syrian Arab Republic":"SY","Taiwan":"TW","Tajikistan":"TJ","Tanzania":"TZ","Thailand":"TH","Togo":"TG","Tunisia":"TN","Turkey":"TR","Turks and Caicos Islands":"TC","US Virgin Islands":"VI","Ukraine":"UA","United Arab Emirates":"AE","United Kingdom":"GB","United States of America":"US","Uruguay":"UY","Uzbekistan":"UZ","Vanuatu":"VU","Venezuela":"VE","Vietnam":"VN","Yemen":"YE","Yugoslavia":"YU","Zambia":"ZM","Zimbabwe":"ZW"
         };
@@ -352,7 +366,6 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-        /* CACCIATORE SERIE TV */
         async function searchTV() {
             const query = document.getElementById('tvSearch').value.trim();
             const yearFrom = document.getElementById('tvFilterYearFrom').value;
@@ -555,11 +568,6 @@
                         img.src = m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path;
                     } else {
                         img.src = 'https://via.placeholder.com/300x450?text=Ricerca...';
-                        const year = m.release_date ? m.release_date.split('-')[0] : '';
-                        fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`)
-                            .then(r => r.json()).then(data => {
-                                if (data.Poster && data.Poster !== 'N/A') { img.src = data.Poster; m.poster_path = data.Poster; } else { img.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }
-                            }).catch(() => { img.src = 'https://via.placeholder.com/300x450?text=No+Poster'; });
                     }
                     const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; item.append(b, img, t);
                 } else {
@@ -572,7 +580,6 @@
             frag.appendChild(wrapper); container.appendChild(frag);
         }
 
-        /* IL GRILLETTO: FUNZIONE DI RICERCA AUTOMATICA AL CLICK SUL CAST */
         function triggerActorSearch(actorName, isTV) {
             document.getElementById('detail-view').style.display = 'none';
             if (isTV) {
@@ -593,12 +600,11 @@
             let m;
             if (!isTV) { m = localDB.find(x => String(x.id) === String(id)); }
             
-            // Richiesta Potenziata TMDB: Aggiunto release_dates per il cinema Italia
+            // AGGIUNTO 'external_ids' PER SCOVARE L'ID DI IMDB
             const fetchType = isTV ? 'tv' : 'movie';
-            const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits,release_dates`)).json();
+            const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits,release_dates,external_ids`)).json();
 
             if (!m) {
-                // OBIETTIVO 1: ALLINEAMENTO TEMPORALE (SOLO USCITA SALA ITALIA TIPO 3)
                 let finalDate = isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date;
                 if (!isTV && tmdb.release_dates?.results) {
                     const itRelease = tmdb.release_dates.results.find(r => r.iso_3166_1 === 'IT');
@@ -624,14 +630,12 @@
                 };
             }
             
-            // OBIETTIVO 3: INTERATTIVITA' CAST (FOTO SU PC, BOTTONI SU MOBILE)
             let rawCastArray = [];
             if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) rawCastArray = tmdb.credits.cast.slice(0, 8);
             else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) rawCastArray = tmdb.aggregate_credits.cast.slice(0, 8);
 
             let castHtmlDesktop = '<div class="cast-gallery">';
             let castHtmlMobile = '<div class="cast-text-list">';
-            
             if (rawCastArray.length === 0) {
                 castHtmlDesktop += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
                 castHtmlMobile += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
@@ -639,16 +643,11 @@
                 rawCastArray.forEach(a => {
                     const cleanName = a.name.replace(/'/g, "\\'");
                     const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
-                    
-                    castHtmlDesktop += `<div class="cast-item" onclick="triggerActorSearch('${cleanName}', ${isTV})">
-                                            <img src="${imgPath}" class="cast-img" loading="lazy">
-                                            <div class="cast-name-overlay">${a.name}</div>
-                                        </div>`;
+                    castHtmlDesktop += `<div class="cast-item" onclick="triggerActorSearch('${cleanName}', ${isTV})"><img src="${imgPath}" class="cast-img" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
                     castHtmlMobile += `<div class="cast-tag" onclick="triggerActorSearch('${cleanName}', ${isTV})">${a.name}</div>`;
                 });
             }
-            castHtmlDesktop += '</div>';
-            castHtmlMobile += '</div>';
+            castHtmlDesktop += '</div>'; castHtmlMobile += '</div>';
             const finalCastInteractiveHtml = castHtmlMobile + castHtmlDesktop;
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
@@ -669,7 +668,8 @@
             };
             
             const c = document.createElement('div'); c.className = 'movie-card';
-            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span>${finalCastInteractiveHtml}<div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
+            // INIETTATO IL CONTENITORE DEL VOTO SOTTO IL TITOLO
+            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><div id="rating-container-${m.id}" style="min-height: 24px; margin-bottom: 10px;"></div><span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span>${finalCastInteractiveHtml}<div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; 
             s.onclick = () => { 
@@ -678,13 +678,34 @@
             };
             c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
 
-            if (!m.poster_path) {
+            // RECUPERO VOTO E POSTER TRAMITE OMDB E ID ESTERNO
+            const ratingContainer = document.getElementById(`rating-container-${m.id}`);
+            const detailImg = document.getElementById(`detail-poster-${m.id}`);
+            
+            let omdbUrl = '';
+            if (tmdb.external_ids && tmdb.external_ids.imdb_id) {
+                omdbUrl = `https://www.omdbapi.com/?i=${tmdb.external_ids.imdb_id}&apikey=90f0f88d`;
+            } else {
                 const year = m.release_date ? m.release_date.split('-')[0] : '';
-                fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`).then(r => r.json()).then(data => {
-                    const detailImg = document.getElementById(`detail-poster-${m.id}`);
-                    if (detailImg) { if (data.Poster && data.Poster !== 'N/A') { detailImg.src = data.Poster; m.poster_path = data.Poster; } else { detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster'; } }
-                }).catch(() => { const detailImg = document.getElementById(`detail-poster-${m.id}`); if (detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster'; });
+                omdbUrl = `https://www.omdbapi.com/?t=${encodeURIComponent(m.title)}&y=${year}&apikey=90f0f88d`;
             }
+
+            fetch(omdbUrl).then(r => r.json()).then(data => {
+                if (!m.poster_path && data.Poster && data.Poster !== 'N/A') {
+                    if (detailImg) detailImg.src = data.Poster; m.poster_path = data.Poster;
+                } else if (!m.poster_path && detailImg) {
+                    detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
+                }
+
+                if (data.imdbRating && data.imdbRating !== 'N/A') {
+                    if (ratingContainer) ratingContainer.innerHTML = getStarRatingHtml(data.imdbRating, 'IMDb');
+                } else if (tmdb.vote_average) {
+                    if (ratingContainer) ratingContainer.innerHTML = getStarRatingHtml(tmdb.vote_average.toFixed(1), 'TMDB');
+                }
+            }).catch(() => {
+                if (!m.poster_path && detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
+                if (tmdb.vote_average && ratingContainer) ratingContainer.innerHTML = getStarRatingHtml(tmdb.vote_average.toFixed(1), 'TMDB');
+            });
 
             fetch(`https://api.themoviedb.org/3/${fetchType}/${m.id}/watch/providers?api_key=${TMDB_API_KEY}`).then(r => r.json()).then(data => {
                 const itData = data.results?.IT; const pContainer = document.getElementById(`streaming-providers-${m.id}`);
