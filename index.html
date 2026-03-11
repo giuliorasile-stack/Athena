@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.5 Ibrida</title>
+    <title>Athena Lab V9.6 Ibrida</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -67,10 +67,9 @@
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
-        .cast-text-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .cast-tag { background: #222; color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; border: 1px solid #444; transition: all 0.2s; }
-        .cast-tag:hover { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
-        .cast-gallery { display: none; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; }
+        /* FOTO ATTORI CAROSELLO UNIVERSALE (PC + SMARTPHONE) */
+        .cast-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .cast-gallery::-webkit-scrollbar { display: none; }
         .cast-item { position: relative; width: 90px; flex-shrink: 0; cursor: pointer; border-radius: 8px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; }
         .cast-item:hover { transform: scale(1.05); border-color: var(--gold); z-index: 10; }
         .cast-img { width: 100%; height: 135px; object-fit: cover; display: block; }
@@ -85,15 +84,13 @@
             .movie-card { display: flex !important; flex-direction: row !important; align-items: flex-start; }
             .movie-card > img { width: 350px !important; max-width: 40% !important; height: auto; border-right: 1px solid rgba(255,255,255,0.1); }
             .movie-info { flex: 1; padding: 30px !important; }
-            .cast-text-list { display: none; }
-            .cast-gallery { display: flex; }
         }
     </style>
 </head>
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.5</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.6</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -264,9 +261,7 @@
             const r = parseFloat(ratingStr);
             const fullStars = Math.round(r / 2);
             let stars = '';
-            for(let i=1; i<=5; i++) {
-                stars += i <= fullStars ? '★' : '☆';
-            }
+            for(let i=1; i<=5; i++) { stars += i <= fullStars ? '★' : '☆'; }
             return `<div class="rating-stars"><span class="stars-visual">${stars}</span> <span class="stars-text">${ratingStr}/10 ${source}</span></div>`;
         }
 
@@ -597,58 +592,60 @@
 
         async function openDetails(id, isTV = false) {
             lastScrollPos = window.scrollY;
-            let m;
-            if (!isTV) { m = localDB.find(x => String(x.id) === String(id)); }
+            let m = localDB.find(x => String(x.id) === String(id) && x.isTV === isTV);
             
-            // AGGIUNTO 'external_ids' PER SCOVARE L'ID DI IMDB
+            // LA CHIAMATA API ORA È OBBLIGATORIA PER RECUPERARE LA DATA ITALIANA E LE FOTO RECENTI
             const fetchType = isTV ? 'tv' : 'movie';
             const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits,release_dates,external_ids`)).json();
 
+            // 1. FORZATURA DATA ITALIANA (SOVRASCRIVE IL DB LOCALE)
+            let finalDate = isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date;
+            if (!isTV && tmdb.release_dates?.results) {
+                const itRelease = tmdb.release_dates.results.find(r => r.iso_3166_1 === 'IT');
+                if (itRelease) {
+                    const theaterDate = itRelease.release_dates.find(rd => rd.type === 3);
+                    if (theaterDate) finalDate = theaterDate.release_date.split('T')[0];
+                }
+            }
+
+            let finalDirector = "N/D";
+            if (isTV) {
+                if (tmdb.created_by && tmdb.created_by.length > 0) finalDirector = tmdb.created_by.map(c => c.name).join(', ');
+                else if (tmdb.aggregate_credits?.crew) { let dir = tmdb.aggregate_credits.crew.find(p => p.job === 'Director' || p.department === 'Directing'); if (dir) finalDirector = dir.name; }
+            } else {
+                finalDirector = tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D";
+            }
+
+            // CREA O AGGIORNA M CON I DATI FRESCHI DI TMDB (Risolve il Paradosso Anaconda)
             if (!m) {
-                let finalDate = isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date;
-                if (!isTV && tmdb.release_dates?.results) {
-                    const itRelease = tmdb.release_dates.results.find(r => r.iso_3166_1 === 'IT');
-                    if (itRelease) {
-                        const theaterDate = itRelease.release_dates.find(rd => rd.type === 3);
-                        if (theaterDate) finalDate = theaterDate.release_date.split('T')[0];
-                    }
-                }
-
-                let finalDirector = "N/D";
-                if (isTV) {
-                    if (tmdb.created_by && tmdb.created_by.length > 0) finalDirector = tmdb.created_by.map(c => c.name).join(', ');
-                    else if (tmdb.aggregate_credits?.crew) { let dir = tmdb.aggregate_credits.crew.find(p => p.job === 'Director' || p.department === 'Directing'); if (dir) finalDirector = dir.name; }
-                } else {
-                    finalDirector = tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D";
-                }
-
                 m = { 
                     id: tmdb.id, title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, poster_path: tmdb.poster_path, 
                     release_date: finalDate, popularity: tmdb.popularity, overview: tmdb.overview, 
                     paese: isTV ? (tmdb.origin_country?.join(', ') || "N/D") : (tmdb.production_countries?.map(c => c.name).join(', ') || "N/D"), 
                     genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", director: finalDirector, isTV: isTV 
                 };
+            } else {
+                m.release_date = finalDate || m.release_date;
+                if(finalDirector !== "N/D") m.director = finalDirector;
+                if(tmdb.poster_path) m.poster_path = tmdb.poster_path;
             }
             
+            // 2. CAROSELLO FOTO UNIVERSALE (ORA ANCHE SU IPHONE)
             let rawCastArray = [];
-            if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) rawCastArray = tmdb.credits.cast.slice(0, 8);
-            else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) rawCastArray = tmdb.aggregate_credits.cast.slice(0, 8);
+            if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) rawCastArray = tmdb.credits.cast.slice(0, 10);
+            else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) rawCastArray = tmdb.aggregate_credits.cast.slice(0, 10);
 
             let castHtmlDesktop = '<div class="cast-gallery">';
-            let castHtmlMobile = '<div class="cast-text-list">';
             if (rawCastArray.length === 0) {
                 castHtmlDesktop += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
-                castHtmlMobile += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
             } else {
                 rawCastArray.forEach(a => {
                     const cleanName = a.name.replace(/'/g, "\\'");
                     const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
                     castHtmlDesktop += `<div class="cast-item" onclick="triggerActorSearch('${cleanName}', ${isTV})"><img src="${imgPath}" class="cast-img" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
-                    castHtmlMobile += `<div class="cast-tag" onclick="triggerActorSearch('${cleanName}', ${isTV})">${a.name}</div>`;
                 });
             }
-            castHtmlDesktop += '</div>'; castHtmlMobile += '</div>';
-            const finalCastInteractiveHtml = castHtmlMobile + castHtmlDesktop;
+            castHtmlDesktop += '</div>';
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
             document.getElementById('main-db-view').style.display = 'none';
@@ -668,8 +665,7 @@
             };
             
             const c = document.createElement('div'); c.className = 'movie-card';
-            // INIETTATO IL CONTENITORE DEL VOTO SOTTO IL TITOLO
-            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><div id="rating-container-${m.id}" style="min-height: 24px; margin-bottom: 10px;"></div><span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span>${finalCastInteractiveHtml}<div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
+            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><div id="rating-container-${m.id}" style="min-height: 24px; margin-bottom: 10px;"></div><span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span>${castHtmlDesktop}<div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; 
             s.onclick = () => { 
@@ -678,7 +674,6 @@
             };
             c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
 
-            // RECUPERO VOTO E POSTER TRAMITE OMDB E ID ESTERNO
             const ratingContainer = document.getElementById(`rating-container-${m.id}`);
             const detailImg = document.getElementById(`detail-poster-${m.id}`);
             
