@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.8 Ultimate</title>
+    <title>Athena Lab V9.9 Ultimate</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -89,7 +89,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.8</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.9</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -174,7 +174,10 @@
             <button class="btn-now-playing" onclick="fetchTimeMachine()">🍿 OGGI AL CINEMA (-30 / +15 GG)</button>
             <div id="resultsContainer"></div>
         </div>
+        
         <div id="detail-view" style="display:none;"></div>
+        
+        <div id="actor-view" style="display:none;"></div>
     </div>
 
     <div id="tab-tv" class="tab-content">
@@ -485,7 +488,6 @@
                 return matchYearFrom && matchYearTo && matchCountry && matchType && matchGenre;
             };
 
-            // PRIMA VERITA': IL DATABASE LOCALE (CARICAMENTO INIZIALE)
             if (localDB.length > 0) {
                 localDB.forEach(m => {
                     const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
@@ -498,7 +500,6 @@
                 if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
-                // SECONDA VERITA': TMDB (CON SOVRASCRITTURA DATA SE GIA' PRESENTE)
                 if (query) {
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
@@ -603,21 +604,6 @@
             frag.appendChild(wrapper); container.appendChild(frag);
         }
 
-        function triggerActorSearch(actorName, isTV) {
-            document.getElementById('detail-view').style.display = 'none';
-            if (isTV) {
-                document.getElementById('main-tv-view').style.display = 'block';
-                switchTab('tv', document.getElementById('nav-tv'));
-                document.getElementById('tvSearch').value = actorName;
-                searchTV();
-            } else {
-                document.getElementById('main-db-view').style.display = 'block';
-                switchTab('database', document.getElementById('nav-db'));
-                document.getElementById('manualSearch').value = actorName;
-                searchManual();
-            }
-        }
-
         async function openDetails(id, isTV = false) {
             lastScrollPos = window.scrollY;
             let m = localDB.find(x => String(x.id) === String(id) && x.isTV === isTV);
@@ -670,16 +656,19 @@
                 castHtmlDesktop += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
             } else {
                 rawCastArray.forEach(a => {
-                    const cleanName = a.name.replace(/'/g, "\\'");
                     const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
-                    castHtmlDesktop += `<div class="actor-scroll-card" onclick="triggerActorSearch('${cleanName}', ${isTV})"><img src="${imgPath}" class="actor-pic" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
+                    // LA GRANDE MODIFICA: Ora passa l'ID univoco di TMDB invece del nome
+                    castHtmlDesktop += `<div class="actor-scroll-card" onclick="openActorDetails(${a.id})"><img src="${imgPath}" class="actor-pic" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
                 });
             }
             castHtmlDesktop += '</div>';
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
+            
+            // Nasconde tutte le altre viste
             document.getElementById('main-db-view').style.display = 'none';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'none';
+            document.getElementById('actor-view').style.display = 'none';
             
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
             document.getElementById('tab-database').classList.add('active');
@@ -691,9 +680,7 @@
                 dv.style.display = 'none'; 
                 if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); } 
                 else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
-                
                 renderUI(isTVMode); 
-                
                 setTimeout(() => window.scrollTo(0, lastScrollPos), 10); 
             };
             
@@ -724,7 +711,6 @@
                 } else if (!m.poster_path && detailImg) {
                     detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster';
                 }
-
                 if (data.imdbRating && data.imdbRating !== 'N/A') {
                     if (ratingContainer) ratingContainer.innerHTML = getStarRatingHtml(data.imdbRating, 'IMDb');
                 } else if (tmdb.vote_average) {
@@ -751,6 +737,106 @@
             }).catch(() => {});
         }
 
+        // === IL MOTORE DELLA SCHEDA ATTORE (Fase 1 del Progetto V10) ===
+        async function openActorDetails(personId) {
+            // Spegniamo tutti i blocchi attuali
+            document.getElementById('detail-view').style.display = 'none';
+            document.getElementById('main-db-view').style.display = 'none';
+            if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'none';
+
+            const av = document.getElementById('actor-view');
+            av.style.display = 'block';
+            av.innerHTML = '<p style="text-align:center; color:var(--gold); margin-top:50px;">Apertura Dossier Personaggio...</p>';
+            window.scrollTo(0, 0);
+
+            try {
+                // Chiamata chirurgica tramite ID univoco
+                const res = await fetch(`https://api.themoviedb.org/3/person/${personId}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=combined_credits`);
+                const person = await res.json();
+
+                const b = document.createElement('button');
+                b.className = 'btn-back';
+                b.textContent = '← TORNA ALLA RICERCA';
+                b.onclick = () => {
+                    av.style.display = 'none';
+                    if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); }
+                    else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
+                    renderUI(isTVMode);
+                    window.scrollTo(0, 0);
+                };
+
+                const profilePath = person.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : 'https://via.placeholder.com/500x750/111/f5c518?text=NO+FOTO';
+                const bio = person.biography || "Nessuna biografia disponibile in italiano.";
+                const birthday = person.birthday ? person.birthday.split('-').reverse().join('/') : 'N/D';
+                const placeOfBirth = person.place_of_birth || 'N/D';
+
+                // Estrazione Filmografia (Unione tra Cinema e Serie TV)
+                let credits = person.combined_credits.cast || [];
+                // Ordina dal più recente al più vecchio
+                credits.sort((a, b) => {
+                    const dateA = a.release_date || a.first_air_date || '1900-01-01';
+                    const dateB = b.release_date || b.first_air_date || '1900-01-01';
+                    return new Date(dateB) - new Date(dateA);
+                });
+
+                let filmographyHtml = '<h3 style="color:var(--gold); font-family:Montserrat; margin-top:30px;">FILMOGRAFIA</h3>';
+                filmographyHtml += '<div class="movies-grid">';
+                
+                credits.forEach(c => {
+                    const isTV = c.media_type === 'tv';
+                    const title = isTV ? c.name : c.title;
+                    const dateStr = c.release_date || c.first_air_date || '';
+                    const year = dateStr ? dateStr.split('-')[0] : 'N/D';
+                    const poster = c.poster_path ? `https://image.tmdb.org/t/p/w300${c.poster_path}` : 'https://via.placeholder.com/300x450/111/fff?text=NO+POSTER';
+                    const icon = isTV ? '📺' : '🎥';
+                    const character = c.character ? `<div style="font-size:0.6rem; color:#888; text-align:center; padding-bottom:5px;">Ruolo: ${c.character}</div>` : '';
+
+                    filmographyHtml += `
+                        <div class="grid-item" onclick="openDetailsFromActor(${c.id}, ${isTV})">
+                            <div class="movie-badge">${year}</div>
+                            <div class="type-badge">${icon}</div>
+                            <img src="${poster}" class="grid-poster" loading="lazy">
+                            <div class="grid-title">${title}</div>
+                            ${character}
+                        </div>
+                    `;
+                });
+                filmographyHtml += '</div>';
+
+                const header = document.createElement('div');
+                header.className = 'movie-card'; 
+                header.innerHTML = `
+                    <img src="${profilePath}" style="width:100%; max-width:350px;">
+                    <div class="movie-info">
+                        <h2>${person.name}</h2>
+                        <span class="data-label">Data di nascita</span>
+                        <span class="data-value">${birthday}</span>
+                        <span class="data-label">Luogo di nascita</span>
+                        <span class="data-value">${placeOfBirth}</span>
+                        <span class="data-label">Biografia</span>
+                        <p style="font-size:0.85rem; line-height:1.5; color:#ddd; max-height: 200px; overflow-y: auto;">${bio}</p>
+                    </div>
+                `;
+
+                av.innerHTML = '';
+                av.appendChild(b);
+                av.appendChild(header);
+                
+                const creditsDiv = document.createElement('div');
+                creditsDiv.innerHTML = filmographyHtml;
+                av.appendChild(creditsDiv);
+
+            } catch(e) {
+                av.innerHTML = '<p style="color:red; text-align:center;">Errore caricamento dossier attore.</p>';
+            }
+        }
+
+        // Ponte tra Attore e Film
+        function openDetailsFromActor(id, isTV) {
+             document.getElementById('actor-view').style.display = 'none';
+             openDetails(id, isTV);
+        }
+
         function switchTab(t, el) { 
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); 
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); 
@@ -758,6 +844,7 @@
             if(el) el.classList.add('active'); 
             isTVMode = (t === 'tv');
             document.getElementById('detail-view').style.display = 'none';
+            document.getElementById('actor-view').style.display = 'none';
             document.getElementById('main-db-view').style.display = 'block';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'block';
             if(t === 'watchlist') renderWatchlist(); 
@@ -775,7 +862,7 @@
         function renderWatchlist() { 
             const c = document.getElementById('watchlistContainer'); 
             if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Nessun preferito.</p>'; return; } 
-            c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div class="wl-content" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div style="font-weight:700;">${m.isTV ? '📺 ' : ''}${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class=\"btn-delete-wl\" onclick=\"removeWL('${m.id}', ${m.isTV || false})\">X</button></div>`).join(''); 
+            c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div class="wl-content" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div style="font-weight:700;">${m.isTV ? '📺 ' : ''}${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class="btn-delete-wl" onclick="removeWL('${m.id}', ${m.isTV || false})">X</button></div>`).join(''); 
         }
         
         function viewFromVault(id, isTV) { 
