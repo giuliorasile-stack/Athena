@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.6 Ibrida</title>
+    <title>Athena Lab V9.8 Ultimate</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -67,12 +67,11 @@
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
-        /* FOTO ATTORI CAROSELLO UNIVERSALE (PC + SMARTPHONE) */
-        .cast-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .cast-gallery::-webkit-scrollbar { display: none; }
-        .cast-item { position: relative; width: 90px; flex-shrink: 0; cursor: pointer; border-radius: 8px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; }
-        .cast-item:hover { transform: scale(1.05); border-color: var(--gold); z-index: 10; }
-        .cast-img { width: 100%; height: 135px; object-fit: cover; display: block; }
+        .actor-scroll-box { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .actor-scroll-box::-webkit-scrollbar { display: none; }
+        .actor-scroll-card { position: relative; width: 90px; flex-shrink: 0; cursor: pointer; border-radius: 8px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; }
+        .actor-scroll-card:hover { transform: scale(1.05); border-color: var(--gold); z-index: 10; }
+        .actor-pic { width: 100%; height: 135px; object-fit: cover; display: block; }
         .cast-name-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); color: white; font-size: 0.65rem; text-align: center; padding: 6px 2px; font-weight: 700; box-sizing: border-box; }
 
         .rating-stars { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
@@ -90,7 +89,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.6</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.8</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -255,7 +254,6 @@
             return "";
         }
 
-        // GENERATORE DI STELLINE E VOTO
         function getStarRatingHtml(ratingStr, source) {
             if(!ratingStr || ratingStr === 'N/A' || ratingStr == 0) return '';
             const r = parseFloat(ratingStr);
@@ -487,6 +485,7 @@
                 return matchYearFrom && matchYearTo && matchCountry && matchType && matchGenre;
             };
 
+            // PRIMA VERITA': IL DATABASE LOCALE (CARICAMENTO INIZIALE)
             if (localDB.length > 0) {
                 localDB.forEach(m => {
                     const matchText = !query || (m.title && m.title.toLowerCase().includes(query)) || (m.cast && m.cast.toLowerCase().includes(query)) || (m.director && m.director.toLowerCase().includes(query));
@@ -499,10 +498,18 @@
                 if (yearTo) discUrl += `&release_date.lte=${parseInt(yearTo)}-12-31`;
                 if (country && COUNTRY_ISO_MAP[country]) discUrl += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                 
+                // SECONDA VERITA': TMDB (CON SOVRASCRITTURA DATA SE GIA' PRESENTE)
                 if (query) {
                     const res_movie = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&query=${encodeURIComponent(query)}`);
                     const data_movie = await res_movie.json();
-                    (data_movie.results || []).forEach(m => { m.isTV = false; if(validateMovie(m, false) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); });
+                    (data_movie.results || []).forEach(m => { 
+                        m.isTV = false; 
+                        if (risultati_totali.has(String(m.id))) { 
+                            risultati_totali.get(String(m.id)).release_date = m.release_date || risultati_totali.get(String(m.id)).release_date; 
+                        } else if (validateMovie(m, false)) { 
+                            risultati_totali.set(String(m.id), m); 
+                        } 
+                    });
                     
                     const res_person = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&language=it-IT&query=${encodeURIComponent(query)}`);
                     const data_person = await res_person.json();
@@ -511,7 +518,14 @@
                         let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${p_id}&sort_by=release_date.desc`;
                         if (country && COUNTRY_ISO_MAP[country]) url_discover_base += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
                         const res_p1 = await fetch(url_discover_base + "&page=1"); const data_p1 = await res_p1.json();
-                        (data_p1.results || []).forEach(m => { m.isTV = false; if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); 
+                        (data_p1.results || []).forEach(m => { 
+                            m.isTV = false; 
+                            if (risultati_totali.has(String(m.id))) { 
+                                risultati_totali.get(String(m.id)).release_date = m.release_date || risultati_totali.get(String(m.id)).release_date; 
+                            } else if (validateMovie(m, true)) { 
+                                risultati_totali.set(String(m.id), m); 
+                            } 
+                        }); 
                         
                         const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
                         if (tot_pages_fetch > 1) {
@@ -521,7 +535,14 @@
                             } else {
                                 const pagePromises = []; for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); } pagesData = await Promise.all(pagePromises);
                             }
-                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { m.isTV = false; if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
+                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { 
+                                m.isTV = false; 
+                                if (risultati_totali.has(String(m.id))) { 
+                                    risultati_totali.get(String(m.id)).release_date = m.release_date || risultati_totali.get(String(m.id)).release_date; 
+                                } else if (validateMovie(m, true)) { 
+                                    risultati_totali.set(String(m.id), m); 
+                                } 
+                            }); }); 
                         }
                     }
                 } else {
@@ -531,7 +552,14 @@
                     } else {
                         const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`))); datasets = await Promise.all(responses.map(r => r.json()));
                     }
-                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { m.isTV = false; if(validateMovie(m, true) && !risultati_totali.has(String(m.id))) risultati_totali.set(String(m.id), m); }); }); 
+                    datasets.forEach(d => { if(d.results) d.results.forEach(m => { 
+                        m.isTV = false; 
+                        if (risultati_totali.has(String(m.id))) { 
+                            risultati_totali.get(String(m.id)).release_date = m.release_date || risultati_totali.get(String(m.id)).release_date; 
+                        } else if (validateMovie(m, true)) { 
+                            risultati_totali.set(String(m.id), m); 
+                        } 
+                    }); }); 
                 }
             } catch (e) { console.warn("TMDB timeout, mostro risultati parziali."); }
             
@@ -594,11 +622,9 @@
             lastScrollPos = window.scrollY;
             let m = localDB.find(x => String(x.id) === String(id) && x.isTV === isTV);
             
-            // LA CHIAMATA API ORA È OBBLIGATORIA PER RECUPERARE LA DATA ITALIANA E LE FOTO RECENTI
             const fetchType = isTV ? 'tv' : 'movie';
             const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits,release_dates,external_ids`)).json();
 
-            // 1. FORZATURA DATA ITALIANA (SOVRASCRIVE IL DB LOCALE)
             let finalDate = isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date;
             if (!isTV && tmdb.release_dates?.results) {
                 const itRelease = tmdb.release_dates.results.find(r => r.iso_3166_1 === 'IT');
@@ -616,7 +642,6 @@
                 finalDirector = tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D";
             }
 
-            // CREA O AGGIORNA M CON I DATI FRESCHI DI TMDB (Risolve il Paradosso Anaconda)
             if (!m) {
                 m = { 
                     id: tmdb.id, title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, poster_path: tmdb.poster_path, 
@@ -629,20 +654,25 @@
                 if(finalDirector !== "N/D") m.director = finalDirector;
                 if(tmdb.poster_path) m.poster_path = tmdb.poster_path;
             }
+
+            let listMovie = currentMovieArray.find(x => String(x.id) === String(id));
+            if (listMovie) {
+                listMovie.release_date = finalDate || listMovie.release_date;
+                if(tmdb.poster_path) listMovie.poster_path = tmdb.poster_path;
+            }
             
-            // 2. CAROSELLO FOTO UNIVERSALE (ORA ANCHE SU IPHONE)
             let rawCastArray = [];
             if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) rawCastArray = tmdb.credits.cast.slice(0, 10);
             else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) rawCastArray = tmdb.aggregate_credits.cast.slice(0, 10);
 
-            let castHtmlDesktop = '<div class="cast-gallery">';
+            let castHtmlDesktop = '<div class="actor-scroll-box">';
             if (rawCastArray.length === 0) {
                 castHtmlDesktop += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
             } else {
                 rawCastArray.forEach(a => {
                     const cleanName = a.name.replace(/'/g, "\\'");
                     const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
-                    castHtmlDesktop += `<div class="cast-item" onclick="triggerActorSearch('${cleanName}', ${isTV})"><img src="${imgPath}" class="cast-img" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
+                    castHtmlDesktop += `<div class="actor-scroll-card" onclick="triggerActorSearch('${cleanName}', ${isTV})"><img src="${imgPath}" class="actor-pic" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
                 });
             }
             castHtmlDesktop += '</div>';
@@ -661,6 +691,9 @@
                 dv.style.display = 'none'; 
                 if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); } 
                 else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
+                
+                renderUI(isTVMode); 
+                
                 setTimeout(() => window.scrollTo(0, lastScrollPos), 10); 
             };
             
@@ -742,7 +775,7 @@
         function renderWatchlist() { 
             const c = document.getElementById('watchlistContainer'); 
             if(currentVault.length === 0) { c.innerHTML = '<p style="text-align:center; color:#555; margin-top:50px;">Nessun preferito.</p>'; return; } 
-            c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div class="wl-content" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div style="font-weight:700;">${m.isTV ? '📺 ' : ''}${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class="btn-delete-wl" onclick="removeWL('${m.id}', ${m.isTV || false})">X</button></div>`).join(''); 
+            c.innerHTML = currentVault.map(m => `<div class="wl-item"><img src="${m.poster}" class="wl-poster" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div class="wl-content" onclick="viewFromVault('${m.id}', ${m.isTV || false})"><div style="font-weight:700;">${m.isTV ? '📺 ' : ''}${m.title}</div><div style="font-size:0.75rem; color:var(--gold);">📅 ${m.date ? m.date.split('-').reverse().join('/') : 'N/D'}</div></div><button class=\"btn-delete-wl\" onclick=\"removeWL('${m.id}', ${m.isTV || false})\">X</button></div>`).join(''); 
         }
         
         function viewFromVault(id, isTV) { 
