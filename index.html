@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.3 Ibrida</title>
+    <title>Athena Lab V9.4 Ibrida</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -67,18 +67,31 @@
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
+        /* NUOVI STILI PER LA GALLERIA CAST */
+        .cast-text-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .cast-tag { background: #222; color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; border: 1px solid #444; transition: all 0.2s; }
+        .cast-tag:hover { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+        .cast-gallery { display: none; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; }
+        .cast-item { position: relative; width: 90px; flex-shrink: 0; cursor: pointer; border-radius: 8px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; }
+        .cast-item:hover { transform: scale(1.05); border-color: var(--gold); z-index: 10; }
+        .cast-img { width: 100%; height: 135px; object-fit: cover; display: block; }
+        .cast-name-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); color: white; font-size: 0.65rem; text-align: center; padding: 6px 2px; font-weight: 700; box-sizing: border-box; }
+
         @media (min-width: 769px) {
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
             .movie-card { display: flex !important; flex-direction: row !important; align-items: flex-start; }
             .movie-card > img { width: 350px !important; max-width: 40% !important; height: auto; border-right: 1px solid rgba(255,255,255,0.1); }
             .movie-info { flex: 1; padding: 30px !important; }
+            /* SU PC MOSTRO LE FOTO E NASCONDO I BOTTONI */
+            .cast-text-list { display: none; }
+            .cast-gallery { display: flex; }
         }
     </style>
 </head>
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.3</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.4</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -331,15 +344,7 @@
         function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; document.getElementById('search-type').selectedIndex = 0; document.getElementById('search-genre').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
         
         function toggleTVFilters() { document.getElementById("tvFiltersPanel").classList.toggle("active"); }
-        function resetTVFilters() { 
-            document.getElementById('tvSearch').value = ''; 
-            document.getElementById('tvFilterYearFrom').value = ''; 
-            document.getElementById('tvFilterYearTo').value = ''; 
-            document.getElementById('tvFilterCountry').selectedIndex = 0; // Fix reset paese TV
-            currentMovieArray = []; 
-            document.getElementById('tvResults').innerHTML = ''; 
-            if (document.getElementById("tvFiltersPanel").classList.contains("active")) toggleTVFilters(); 
-        }
+        function resetTVFilters() { document.getElementById('tvSearch').value = ''; document.getElementById('tvFilterYearFrom').value = ''; document.getElementById('tvFilterYearTo').value = ''; document.getElementById('tvFilterCountry').selectedIndex = 0; currentMovieArray = []; document.getElementById('tvResults').innerHTML = ''; if (document.getElementById("tvFiltersPanel").classList.contains("active")) toggleTVFilters(); }
 
         async function intializeGapiClient() { await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] }); }
         window.onload = () => { gapi.load('client', intializeGapiClient); };
@@ -347,12 +352,12 @@
         async function startCloudSync() { try { await gapi.client.load('drive', 'v3'); const folderResp = await gapi.client.drive.files.list({ q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false` }); let fId = folderResp.result.files.length > 0 ? folderResp.result.files[0].id : (await gapi.client.drive.files.create({ resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).result.id; const fileResp = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and '${fId}' in parents and trashed=false` }); if (fileResp.result.files.length > 0) { vaultFileId = fileResp.result.files[0].id; currentVault = await (await fetch(`https://www.googleapis.com/drive/v3/files/${vaultFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } })).json(); } else { const b = 'foo_bar_baz', m = { name: FILE_NAME, parents: [fId], mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify([])}\r\n--${b}--`; await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); const check = await gapi.client.drive.files.list({ q: `name='${FILE_NAME}' and trashed=false` }); vaultFileId = check.result.files[0].id; } document.getElementById('syncIndicator').innerText = "Cloud Sincronizzato ✓"; } catch (e) { document.getElementById('syncIndicator').innerText = "Errore Sync Cloud"; } }
         async function saveToCloud() { const b = 'foo_bar_baz', m = { name: FILE_NAME, mimeType: 'application/json' }; const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(m)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(currentVault)}\r\n--${b}--`; await fetch(`https://www.googleapis.com/upload/drive/v3/files/${vaultFileId}?uploadType=multipart`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${b}` }, body: body }); }
 
-        /* CACCIATORE SERIE TV + GHIGLIOTTINA DEL PRESENTE + VINCOLO ITALIA + FILTRO GEOGRAFICO */
+        /* CACCIATORE SERIE TV */
         async function searchTV() {
             const query = document.getElementById('tvSearch').value.trim();
             const yearFrom = document.getElementById('tvFilterYearFrom').value;
             const yearTo = document.getElementById('tvFilterYearTo').value;
-            const country = document.getElementById('tvFilterCountry').value; // Nuova variabile Paese TV
+            const country = document.getElementById('tvFilterCountry').value;
             
             if (!query && !yearFrom && !yearTo && !country) return;
             const rc = document.getElementById('tvResults');
@@ -375,16 +380,12 @@
                         (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
                     }
                 } else {
-                    // IL RADAR BLOCCATO AL PRESENTE E ALL'ITALIA
                     const todayStr = new Date().toISOString().split('T')[0];
                     const currentYear = new Date().getFullYear();
                     
                     let discUrl = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&language=it-IT&sort_by=popularity.desc&watch_region=IT&with_watch_monetization_types=flatrate|free|ads`;
-                    
                     if (yearFrom) discUrl += `&first_air_date.gte=${yearFrom}-01-01`;
-                    if (country) discUrl += `&with_origin_country=${country}`; // Applica la ghigliottina geografica
-                    
-                    // La Ghigliottina del Presente
+                    if (country) discUrl += `&with_origin_country=${country}`;
                     if (yearTo && parseInt(yearTo) < currentYear) {
                         discUrl += `&first_air_date.lte=${yearTo}-12-31`;
                     } else {
@@ -393,9 +394,7 @@
                     
                     let datasets = [];
                     if (isIOS) {
-                        for (let p = 1; p <= 20; p++) {
-                            try { const res = await fetch(`${discUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { }
-                        }
+                        for (let p = 1; p <= 20; p++) { try { const res = await fetch(`${discUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { } }
                     } else {
                         const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${discUrl}&page=${p+1}`)));
                         datasets = await Promise.all(responses.map(r => r.json()));
@@ -403,22 +402,16 @@
                     datasets.forEach(d => { (d.results || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); }); });
                 }
 
-                // Filtro Client-Side Temporale e Geografico per Scremare i risultati "Sporchi"
                 let filteredResults = Array.from(risultati_totali.values());
                 const todayD = new Date();
                 
                 filteredResults = filteredResults.filter(tv => {
                     if (!tv.first_air_date) return false;
                     const releaseDate = new Date(tv.first_air_date);
-                    
-                    // Regola Inviolabile: Nessuna serie TV futura
                     if (releaseDate > todayD) return false;
-
-                    // Filtro Nazione lato Client
+                    
                     let matchCountry = true;
-                    if (country) {
-                        matchCountry = tv.origin_country && tv.origin_country.includes(country);
-                    }
+                    if (country) matchCountry = tv.origin_country && tv.origin_country.includes(country);
                     
                     let matchYear = true;
                     if (yearFrom || yearTo) {
@@ -430,14 +423,7 @@
                     return matchYear && matchCountry;
                 });
 
-                currentMovieArray = filteredResults.map(tv => ({
-                    id: tv.id,
-                    title: tv.name,
-                    release_date: tv.first_air_date,
-                    poster_path: tv.poster_path,
-                    popularity: tv.popularity,
-                    isTV: true 
-                }));
+                currentMovieArray = filteredResults.map(tv => ({ id: tv.id, title: tv.name, release_date: tv.first_air_date, poster_path: tv.poster_path, popularity: tv.popularity, isTV: true }));
                 renderUI(true);
             } catch (e) { rc.innerHTML = '<p style="color:red;">Errore ricerca Serie TV.</p>'; }
         }
@@ -453,9 +439,7 @@
                 const baseUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&release_date.gte=${strPast}&release_date.lte=${strFuture}&with_release_type=3`; 
                 let datasets = [];
                 if (isIOS) {
-                    for (let p = 1; p <= 20; p++) {
-                        try { const res = await fetch(`${baseUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { console.warn(`TMDB limit su pagina ${p}, continuo...`); }
-                    }
+                    for (let p = 1; p <= 20; p++) { try { const res = await fetch(`${baseUrl}&page=${p}`); datasets.push(await res.json()); } catch(e) { } }
                 } else {
                     const responses = await Promise.all([...Array(20).keys()].map(p => fetch(`${baseUrl}&page=${p+1}`))); 
                     datasets = await Promise.all(responses.map(r => r.json())); 
@@ -588,51 +572,84 @@
             frag.appendChild(wrapper); container.appendChild(frag);
         }
 
+        /* IL GRILLETTO: FUNZIONE DI RICERCA AUTOMATICA AL CLICK SUL CAST */
+        function triggerActorSearch(actorName, isTV) {
+            document.getElementById('detail-view').style.display = 'none';
+            if (isTV) {
+                document.getElementById('main-tv-view').style.display = 'block';
+                switchTab('tv', document.getElementById('nav-tv'));
+                document.getElementById('tvSearch').value = actorName;
+                searchTV();
+            } else {
+                document.getElementById('main-db-view').style.display = 'block';
+                switchTab('database', document.getElementById('nav-db'));
+                document.getElementById('manualSearch').value = actorName;
+                searchManual();
+            }
+        }
+
         async function openDetails(id, isTV = false) {
             lastScrollPos = window.scrollY;
             let m;
             if (!isTV) { m = localDB.find(x => String(x.id) === String(id)); }
+            
+            // Richiesta Potenziata TMDB: Aggiunto release_dates per il cinema Italia
+            const fetchType = isTV ? 'tv' : 'movie';
+            const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits,release_dates`)).json();
+
             if (!m) {
-                const fetchType = isTV ? 'tv' : 'movie';
-                
-                // CEROTTO ANTI-BUCHI: Inserito aggregate_credits per pescare attori e registi nascosti negli episodi TV
-                const tmdb = await (await fetch(`https://api.themoviedb.org/3/${fetchType}/${id}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=credits,aggregate_credits`)).json();
-                
-                // LOGICA ANTI-BUCHI PER REGIA E CREATORE
+                // OBIETTIVO 1: ALLINEAMENTO TEMPORALE (SOLO USCITA SALA ITALIA TIPO 3)
+                let finalDate = isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date;
+                if (!isTV && tmdb.release_dates?.results) {
+                    const itRelease = tmdb.release_dates.results.find(r => r.iso_3166_1 === 'IT');
+                    if (itRelease) {
+                        const theaterDate = itRelease.release_dates.find(rd => rd.type === 3);
+                        if (theaterDate) finalDate = theaterDate.release_date.split('T')[0];
+                    }
+                }
+
                 let finalDirector = "N/D";
                 if (isTV) {
-                    if (tmdb.created_by && tmdb.created_by.length > 0) {
-                        finalDirector = tmdb.created_by.map(c => c.name).join(', ');
-                    } else if (tmdb.aggregate_credits?.crew) {
-                        let dir = tmdb.aggregate_credits.crew.find(p => p.job === 'Director' || p.department === 'Directing');
-                        if (dir) finalDirector = dir.name;
-                    }
+                    if (tmdb.created_by && tmdb.created_by.length > 0) finalDirector = tmdb.created_by.map(c => c.name).join(', ');
+                    else if (tmdb.aggregate_credits?.crew) { let dir = tmdb.aggregate_credits.crew.find(p => p.job === 'Director' || p.department === 'Directing'); if (dir) finalDirector = dir.name; }
                 } else {
                     finalDirector = tmdb.credits?.crew?.find(p => p.job === 'Director')?.name || "N/D";
                 }
 
-                // LOGICA ANTI-BUCHI PER IL CAST
-                let finalCast = "N/D";
-                if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) {
-                    finalCast = tmdb.credits.cast.slice(0, 5).map(a => a.name).join(', ');
-                } else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) {
-                    finalCast = tmdb.aggregate_credits.cast.slice(0, 5).map(a => a.name).join(', ');
-                }
-
                 m = { 
-                    id: tmdb.id, 
-                    title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, 
-                    poster_path: tmdb.poster_path, 
-                    release_date: isTV ? (tmdb.first_air_date || tmdb.release_date) : tmdb.release_date, 
-                    popularity: tmdb.popularity, 
-                    overview: tmdb.overview, 
-                    paese: tmdb.production_countries?.map(c => c.name).join(', ') || "N/D", 
-                    genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", 
-                    director: finalDirector, 
-                    cast: finalCast, 
-                    isTV: isTV 
+                    id: tmdb.id, title: isTV ? (tmdb.name || tmdb.title) : tmdb.title, poster_path: tmdb.poster_path, 
+                    release_date: finalDate, popularity: tmdb.popularity, overview: tmdb.overview, 
+                    paese: isTV ? (tmdb.origin_country?.join(', ') || "N/D") : (tmdb.production_countries?.map(c => c.name).join(', ') || "N/D"), 
+                    genres: tmdb.genres?.map(g => g.name).join(', ') || "N/D", director: finalDirector, isTV: isTV 
                 };
             }
+            
+            // OBIETTIVO 3: INTERATTIVITA' CAST (FOTO SU PC, BOTTONI SU MOBILE)
+            let rawCastArray = [];
+            if (tmdb.credits?.cast && tmdb.credits.cast.length > 0) rawCastArray = tmdb.credits.cast.slice(0, 8);
+            else if (isTV && tmdb.aggregate_credits?.cast && tmdb.aggregate_credits.cast.length > 0) rawCastArray = tmdb.aggregate_credits.cast.slice(0, 8);
+
+            let castHtmlDesktop = '<div class="cast-gallery">';
+            let castHtmlMobile = '<div class="cast-text-list">';
+            
+            if (rawCastArray.length === 0) {
+                castHtmlDesktop += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
+                castHtmlMobile += '<span style="color:#bbb; font-size:0.8rem;">N/D</span>';
+            } else {
+                rawCastArray.forEach(a => {
+                    const cleanName = a.name.replace(/'/g, "\\'");
+                    const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
+                    
+                    castHtmlDesktop += `<div class="cast-item" onclick="triggerActorSearch('${cleanName}', ${isTV})">
+                                            <img src="${imgPath}" class="cast-img" loading="lazy">
+                                            <div class="cast-name-overlay">${a.name}</div>
+                                        </div>`;
+                    castHtmlMobile += `<div class="cast-tag" onclick="triggerActorSearch('${cleanName}', ${isTV})">${a.name}</div>`;
+                });
+            }
+            castHtmlDesktop += '</div>';
+            castHtmlMobile += '</div>';
+            const finalCastInteractiveHtml = castHtmlMobile + castHtmlDesktop;
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
             document.getElementById('main-db-view').style.display = 'none';
@@ -652,7 +669,7 @@
             };
             
             const c = document.createElement('div'); c.className = 'movie-card';
-            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita</span><span class="data-value">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span><span class="data-value">${m.cast}</span><div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
+            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${m.director}</span><span class="data-label">Cast Principale</span>${finalCastInteractiveHtml}<div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
             
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; 
             s.onclick = () => { 
@@ -669,7 +686,6 @@
                 }).catch(() => { const detailImg = document.getElementById(`detail-poster-${m.id}`); if (detailImg) detailImg.src = 'https://via.placeholder.com/500x750?text=No+Poster'; });
             }
 
-            const fetchType = m.isTV ? 'tv' : 'movie';
             fetch(`https://api.themoviedb.org/3/${fetchType}/${m.id}/watch/providers?api_key=${TMDB_API_KEY}`).then(r => r.json()).then(data => {
                 const itData = data.results?.IT; const pContainer = document.getElementById(`streaming-providers-${m.id}`);
                 if (pContainer && itData) {
@@ -699,7 +715,6 @@
             window.scrollTo(0, 0); 
         }
 
-        /* FIX PREFERITI: Memoria del DNA (Film o TV?) e Link Poster Assoluti */
         async function saveToWL(id, title, poster, date, isTV) { 
             const s = String(id); const isSeries = isTV || false;
             let i = currentVault.findIndex(x => String(x.id) === s && (x.isTV || false) === isSeries); 
