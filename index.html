@@ -870,7 +870,7 @@
                 let crewCredits = person.combined_credits.crew || [];
                 
                 // Filtriamo la crew solo per ruoli principali (Regia o Ideatore) per non inquinare con ruoli minori
-                let directingCredits = crewCredits.filter(c => c.department === 'Directing' || c.job === 'Director' || c.job === 'Creator');
+                let directingCredits = crewCredits.filter(c => c.job === 'Director' || c.job === 'Creator');
                 
                 // Uniamo le carriere ed eliminiamo i doppioni (es. se ha sia recitato che diretto lo stesso film)
                 let allCredits = [...castCredits, ...directingCredits];
