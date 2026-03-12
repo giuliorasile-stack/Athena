@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V9.9 Ultimate</title>
+    <title>Athena Lab V9.9.1 Ultimate</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -78,6 +78,13 @@
         .stars-visual { color: var(--gold); font-size: 1.1rem; letter-spacing: 2px; }
         .stars-text { font-size: 0.75rem; color: #aaa; font-family: 'Montserrat'; font-weight: 700; margin-left: 5px; }
 
+        /* NUOVI STILI PER LA SCHEDA DOSSIER ATTORE */
+        .actor-profile-header { background: var(--card-bg); border-radius: 16px; padding: 30px; text-align: center; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; }
+        .actor-avatar { width: 220px; height: 220px; border-radius: 24px; object-fit: cover; object-position: top; border: 2px solid var(--gold); margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .actor-name { font-size: 2rem; color: #fff; margin: 0 0 10px 0; font-weight: 900; font-family: 'Montserrat'; }
+        .actor-meta { font-size: 0.85rem; color: var(--gold); margin-bottom: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .actor-bio { font-size: 0.95rem; line-height: 1.6; color: #ddd; max-width: 800px; text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+
         @media (min-width: 769px) {
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
             .movie-card { display: flex !important; flex-direction: row !important; align-items: flex-start; }
@@ -89,7 +96,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.9</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V9.9.1</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -657,7 +664,6 @@
             } else {
                 rawCastArray.forEach(a => {
                     const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
-                    // LA GRANDE MODIFICA: Ora passa l'ID univoco di TMDB invece del nome
                     castHtmlDesktop += `<div class="actor-scroll-card" onclick="openActorDetails(${a.id})"><img src="${imgPath}" class="actor-pic" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
                 });
             }
@@ -665,7 +671,6 @@
             
             const post = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/500x750?text=Ricerca...';
             
-            // Nasconde tutte le altre viste
             document.getElementById('main-db-view').style.display = 'none';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'none';
             document.getElementById('actor-view').style.display = 'none';
@@ -737,9 +742,8 @@
             }).catch(() => {});
         }
 
-        // === IL MOTORE DELLA SCHEDA ATTORE (Fase 1 del Progetto V10) ===
+        // === IL MOTORE DELLA SCHEDA ATTORE (Fase 1.1: Restyling ID Card) ===
         async function openActorDetails(personId) {
-            // Spegniamo tutti i blocchi attuali
             document.getElementById('detail-view').style.display = 'none';
             document.getElementById('main-db-view').style.display = 'none';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'none';
@@ -750,7 +754,6 @@
             window.scrollTo(0, 0);
 
             try {
-                // Chiamata chirurgica tramite ID univoco
                 const res = await fetch(`https://api.themoviedb.org/3/person/${personId}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=combined_credits`);
                 const person = await res.json();
 
@@ -765,21 +768,19 @@
                     window.scrollTo(0, 0);
                 };
 
-                const profilePath = person.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : 'https://via.placeholder.com/500x750/111/f5c518?text=NO+FOTO';
+                const profilePath = person.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : 'https://via.placeholder.com/500x500/111/f5c518?text=NO+FOTO';
                 const bio = person.biography || "Nessuna biografia disponibile in italiano.";
                 const birthday = person.birthday ? person.birthday.split('-').reverse().join('/') : 'N/D';
                 const placeOfBirth = person.place_of_birth || 'N/D';
 
-                // Estrazione Filmografia (Unione tra Cinema e Serie TV)
                 let credits = person.combined_credits.cast || [];
-                // Ordina dal più recente al più vecchio
                 credits.sort((a, b) => {
                     const dateA = a.release_date || a.first_air_date || '1900-01-01';
                     const dateB = b.release_date || b.first_air_date || '1900-01-01';
                     return new Date(dateB) - new Date(dateA);
                 });
 
-                let filmographyHtml = '<h3 style="color:var(--gold); font-family:Montserrat; margin-top:30px;">FILMOGRAFIA</h3>';
+                let filmographyHtml = '<h3 style="color:var(--gold); font-family:Montserrat; margin-top:10px;">FILMOGRAFIA</h3>';
                 filmographyHtml += '<div class="movies-grid">';
                 
                 credits.forEach(c => {
@@ -803,19 +804,14 @@
                 });
                 filmographyHtml += '</div>';
 
+                // LA NUOVA STRUTTURA A DOSSIER CENTRATO
                 const header = document.createElement('div');
-                header.className = 'movie-card'; 
+                header.className = 'actor-profile-header'; 
                 header.innerHTML = `
-                    <img src="${profilePath}" style="width:100%; max-width:350px;">
-                    <div class="movie-info">
-                        <h2>${person.name}</h2>
-                        <span class="data-label">Data di nascita</span>
-                        <span class="data-value">${birthday}</span>
-                        <span class="data-label">Luogo di nascita</span>
-                        <span class="data-value">${placeOfBirth}</span>
-                        <span class="data-label">Biografia</span>
-                        <p style="font-size:0.85rem; line-height:1.5; color:#ddd; max-height: 200px; overflow-y: auto;">${bio}</p>
-                    </div>
+                    <img src="${profilePath}" class="actor-avatar">
+                    <h2 class="actor-name">${person.name}</h2>
+                    <div class="actor-meta">Data di nascita: ${birthday} &nbsp;&bull;&nbsp; Luogo: ${placeOfBirth}</div>
+                    <div class="actor-bio">${bio}</div>
                 `;
 
                 av.innerHTML = '';
@@ -831,7 +827,6 @@
             }
         }
 
-        // Ponte tra Attore e Film
         function openDetailsFromActor(id, isTV) {
              document.getElementById('actor-view').style.display = 'none';
              openDetails(id, isTV);
