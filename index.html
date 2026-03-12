@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10 Pro</title>
+    <title>Athena Lab V10.1 Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -36,7 +36,7 @@
         .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 80px; }
         .filter-group label { font-size: 0.7rem; color: var(--gold); font-weight: bold; }
         .filter-group input, .filter-group select { padding: 10px; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; font-size: 16px; min-height: 44px; }
-        .filter-group select { -webkit-appearance: none; appearance: none; cursor: pointer; position: relative; z-index: 10000; -webkit-transform: translateZ(0); pointer-events: auto !important; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23f5c518%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 12px auto; padding-right: 30px; }
+        .filter-group select { -webkit-appearance: none; appearance: none; cursor: pointer; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23f5c518%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 12px auto; padding-right: 30px; }
         .btn-now-playing { width: 100%; padding: 15px; border-radius: 12px; border: none; background: linear-gradient(45deg, #f5c518, #d4a815); color: #000; font-family: 'Montserrat'; font-weight: 900; margin-bottom: 10px; cursor: pointer; }
         .sort-toggle, .view-toggle { display: flex; background: #1a1a1a; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; overflow: hidden; }
         .sort-btn, .view-btn { flex: 1; text-align: center; padding: 10px; font-weight: 800; font-size: 0.7rem; color: #666; cursor: pointer; }
@@ -45,23 +45,24 @@
         .grid-item { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); position: relative; cursor: pointer; }
         .grid-poster { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; }
         .grid-title { font-size: 0.8rem; font-weight: 700; padding: 8px; text-align: center; }
-        
         .movie-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: var(--gold); font-size: 0.65rem; font-weight: 900; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
         .type-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); font-size: 0.8rem; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--gold); backdrop-filter: blur(5px); z-index: 2; }
-        
         .list-item { background: #1a1a1a; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-bottom: 6px; cursor: pointer; }
         .list-data-dynamic { color: var(--gold); font-size: 0.75rem; font-weight: 900; font-family: 'Montserrat'; text-align: right; }
         .btn-back { background: #333; color: #fff; width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 800; margin-bottom: 15px; font-size: 0.85rem; cursor: pointer; }
         
-        /* BLINDATURA LAYOUT V10 */
-        .movie-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box; }
-        .movie-info { padding: 20px; width: 100%; box-sizing: border-box; overflow-wrap: break-word; }
-        .movie-info p { font-size: 0.9rem; line-height: 1.5; color: #ddd; max-width: 100%; }
+        /* RESTYLING V10.1: BLINDATURA, TITOLI E POSTER */
+        .movie-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        .detail-main-poster { width: 100%; display: block; border-bottom: 3px solid var(--gold); object-fit: cover; }
+        .movie-info { padding: 20px; width: 100%; box-sizing: border-box; min-width: 0; /* LA GABBIA MAGICA PER L'IPAD */ overflow-wrap: break-word; }
         
+        .movie-title-frame { background: linear-gradient(135deg, rgba(245, 197, 24, 0.15) 0%, rgba(245, 197, 24, 0.02) 100%); border-left: 4px solid var(--gold); border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .movie-title-frame h2 { margin: 0; font-size: 1.8rem; color: #fff; font-family: 'Montserrat'; font-weight: 900; line-height: 1.2; text-transform: uppercase; }
+        
+        .plot-box { font-size: 0.95rem; line-height: 1.6; color: #ddd; max-width: 100%; margin-top: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
+
         .data-label { color: var(--gold); font-weight: 900; font-family: 'Montserrat'; font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; display: block; }
         .data-value { color: #fff; font-size: 0.95rem; display: block; margin-top: 4px; line-height: 1.4; }
-        
-        /* CLASSE REGISTA CLICCABILE V10 */
         .clickable-name { color: var(--gold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
         .btn-save { background: var(--green); color: #000; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 10px; cursor: pointer; }
@@ -70,19 +71,17 @@
         .wl-poster { width: 50px; height: 75px; border-radius: 6px; margin-right: 15px; object-fit: cover; cursor: pointer; }
         .wl-content { flex: 1; cursor: pointer; }
         .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
-        
         .hide-without-db { display: none !important; }
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
 
-        .actor-scroll-box { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .actor-scroll-box { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-top: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; width: 100%; box-sizing: border-box; }
         .actor-scroll-box::-webkit-scrollbar { display: none; }
         .actor-scroll-card { position: relative; width: 90px; flex-shrink: 0; cursor: pointer; border-radius: 8px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; }
         .actor-scroll-card:hover { transform: scale(1.05); border-color: var(--gold); z-index: 10; }
         .actor-pic { width: 100%; height: 135px; object-fit: cover; display: block; }
         .cast-name-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); color: white; font-size: 0.65rem; text-align: center; padding: 6px 2px; font-weight: 700; box-sizing: border-box; }
 
-        /* FIX IPAD TOUCH V10 */
         .is-touch-device .actor-scroll-box { cursor: grab; }
         .is-touch-device .actor-scroll-box:active { cursor: grabbing; }
 
@@ -90,21 +89,22 @@
         .stars-visual { color: var(--gold); font-size: 1.1rem; letter-spacing: 2px; }
         .stars-text { font-size: 0.75rem; color: #aaa; font-family: 'Montserrat'; font-weight: 700; margin-left: 5px; }
 
-        /* SCHEDA ATTORE V10 */
         .actor-profile-header { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; box-sizing: border-box; }
         .actor-avatar { width: 200px; height: 200px; border-radius: 20px; object-fit: contain; background: #000; border: 2px solid var(--gold); box-shadow: 0 10px 20px rgba(0,0,0,0.5); flex-shrink: 0; }
-        .actor-details { flex: 1; width: 100%; box-sizing: border-box; }
+        .actor-details { flex: 1; width: 100%; box-sizing: border-box; min-width: 0; }
         .actor-name { font-size: 2rem; color: #fff; margin: 0 0 10px 0; font-weight: 900; font-family: 'Montserrat'; text-align: center; line-height: 1.1; }
         .actor-meta { font-size: 0.85rem; color: var(--gold); margin-bottom: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
-        .actor-bio { font-size: 0.95rem; line-height: 1.6; color: #ddd; text-align: left; width: 100%; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word; }
+        .actor-bio { font-size: 0.95rem; line-height: 1.6; color: #ddd; text-align: left; width: 100%; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
 
         @media (min-width: 769px) {
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
-            .movie-card { display: flex !important; flex-direction: row !important; align-items: flex-start; }
-            .movie-card > img { width: 350px !important; max-width: 40% !important; height: auto; border-right: 1px solid rgba(255,255,255,0.1); }
-            .movie-info { flex: 1; padding: 30px !important; }
             
-            /* Su PC allineamento a sinistra per attori */
+            /* RESTYLING PC V10.1: IL POSTER FISICO */
+            .movie-card { flex-direction: row !important; padding: 20px !important; gap: 30px !important; background: transparent !important; border: none !important; align-items: flex-start !important; }
+            .detail-main-poster { width: 350px !important; flex-shrink: 0 !important; max-width: 40% !important; border-radius: 16px !important; border: 1px solid rgba(255,255,255,0.1) !important; border-bottom: none !important; box-shadow: 0 20px 40px rgba(0,0,0,0.7) !important; }
+            .movie-info { background: var(--card-bg); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); padding: 30px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+            .movie-title-frame h2 { font-size: 2.2rem !important; }
+            
             .actor-profile-header { flex-direction: row !important; align-items: flex-start !important; padding: 30px !important; gap: 30px !important; }
             .actor-avatar { width: 250px !important; height: 250px !important; }
             .actor-name { text-align: left !important; font-size: 2.2rem !important; }
@@ -115,8 +115,8 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10 PRO</h1>
-        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Protezione Cloud Attiva</p>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.1</h1>
+        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Premium UI Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
 
@@ -271,7 +271,6 @@
         let lastScrollPos = 0, localDB = [];
         let isTVMode = false;
 
-        // SENSORE HARDWARE V10 (Touch vs Mouse)
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
         if (isTouchDevice) document.documentElement.classList.add('is-touch-device');
 
@@ -651,7 +650,6 @@
                 }
             }
 
-            // V10 FIX: Estrazione Regista con HTML cliccabile
             let finalDirector = "N/D";
             let directorHtml = "N/D";
             
@@ -688,7 +686,6 @@
                 if(tmdb.poster_path) m.poster_path = tmdb.poster_path;
             }
             
-            // Fallback se non c'è ID in rete ma c'è nel JSON
             if (directorHtml === "N/D" && m.director && m.director !== "N/D") {
                 directorHtml = m.director;
             }
@@ -735,7 +732,23 @@
             };
             
             const c = document.createElement('div'); c.className = 'movie-card';
-            c.innerHTML = `<img id="detail-poster-${m.id}" src="${post}" style="width:100%"><div class="movie-info"><h2>${m.title}</h2><div id="rating-container-${m.id}" style="min-height: 24px; margin-bottom: 10px;"></div><span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span><span class="data-label">Produzione</span><span class="data-value">${m.paese}</span><span class="data-label">Genere</span><span class="data-value">${m.genres}</span><span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${directorHtml}</span><span class="data-label">Cast Principale</span>${castHtmlDesktop}<div id="streaming-providers-${m.id}"></div><p>${m.overview || ""}</p><button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button></div>`;
+            
+            // L'INIEZIONE DEL NUOVO DESIGN TITOLO E POSTER V10.1
+            c.innerHTML = `
+                <img id="detail-poster-${m.id}" src="${post}" class="detail-main-poster">
+                <div class="movie-info">
+                    <div class="movie-title-frame"><h2>${m.title}</h2></div>
+                    <div id="rating-container-${m.id}" style="min-height: 24px; margin-bottom: 10px;"></div>
+                    <span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span>
+                    <span class="data-label">Produzione</span><span class="data-value">${m.paese}</span>
+                    <span class="data-label">Genere</span><span class="data-value">${m.genres}</span>
+                    <span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${directorHtml}</span>
+                    <span class="data-label">Cast Principale</span>${castHtmlDesktop}
+                    <div id="streaming-providers-${m.id}"></div>
+                    <div class="plot-box">${m.overview || "Nessuna trama disponibile."}</div>
+                    <button class="btn-trailer" onclick="window.open('https://www.youtube.com/results?search_query=Trailer+ita+${encodeURIComponent(m.title)}','_blank')">▶ TRAILER</button>
+                </div>
+            `;
             
             const s = document.createElement('button'); s.className = 'btn-save'; s.textContent = '💾 SALVA CLOUD'; 
             s.onclick = () => { 
