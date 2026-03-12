@@ -865,14 +865,27 @@
                 const birthday = person.birthday ? person.birthday.split('-').reverse().join('/') : 'N/D';
                 const placeOfBirth = person.place_of_birth || 'N/D';
 
-                let credits = person.combined_credits.cast || [];
+                // ESTRAZIONE IBRIDA (ATTORI + REGISTI/IDEATORI)
+                let castCredits = person.combined_credits.cast || [];
+                let crewCredits = person.combined_credits.crew || [];
+                
+                // Filtriamo la crew solo per ruoli principali (Regia o Ideatore) per non inquinare con ruoli minori
+                let directingCredits = crewCredits.filter(c => c.department === 'Directing' || c.job === 'Director' || c.job === 'Creator');
+                
+                // Uniamo le carriere ed eliminiamo i doppioni (es. se ha sia recitato che diretto lo stesso film)
+                let allCredits = [...castCredits, ...directingCredits];
+                let uniqueCreditsMap = new Map();
+                allCredits.forEach(c => uniqueCreditsMap.set(c.id, c));
+                let credits = Array.from(uniqueCreditsMap.values());
+
+                // Ordine cronologico dal più recente
                 credits.sort((a, b) => {
                     const dateA = a.release_date || a.first_air_date || '1900-01-01';
                     const dateB = b.release_date || b.first_air_date || '1900-01-01';
                     return new Date(dateB) - new Date(dateA);
                 });
 
-                let filmographyHtml = '<h3 style="color:var(--gold); font-family:Montserrat; margin-top:10px;">FILMOGRAFIA</h3>';
+                let filmographyHtml = '<h3 style="color:var(--gold); font-family:Montserrat; margin-top:10px;">FILMOGRAFIA COMPLETA</h3>';
                 filmographyHtml += '<div class="movies-grid">';
                 
                 credits.forEach(c => {
@@ -882,7 +895,10 @@
                     const year = dateStr ? dateStr.split('-')[0] : 'N/D';
                     const poster = c.poster_path ? `https://image.tmdb.org/t/p/w300${c.poster_path}` : 'https://via.placeholder.com/300x450/111/fff?text=NO+POSTER';
                     const icon = isTV ? '📺' : '🎥';
-                    const character = c.character ? `<div style="font-size:0.6rem; color:#888; text-align:center; padding-bottom:5px;">Ruolo: ${c.character}</div>` : '';
+                    
+                    // Badge del Ruolo: Specifica se era attore o regista
+                    const roleText = c.character ? `Cast: ${c.character}` : (c.job ? `Ruolo: ${c.job}` : '');
+                    const characterHtml = roleText ? `<div style="font-size:0.6rem; color:#888; text-align:center; padding-bottom:5px; padding-left:4px; padding-right:4px;">${roleText}</div>` : '';
 
                     filmographyHtml += `
                         <div class="grid-item" onclick="openDetailsFromActor(${c.id}, ${isTV})">
@@ -890,7 +906,7 @@
                             <div class="type-badge">${icon}</div>
                             <img src="${poster}" class="grid-poster" loading="lazy">
                             <div class="grid-title">${title}</div>
-                            ${character}
+                            ${characterHtml}
                         </div>
                     `;
                 });
