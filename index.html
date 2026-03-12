@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.1 Premium</title>
+    <title>Athena Lab V10.2 Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -51,14 +51,11 @@
         .list-data-dynamic { color: var(--gold); font-size: 0.75rem; font-weight: 900; font-family: 'Montserrat'; text-align: right; }
         .btn-back { background: #333; color: #fff; width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 800; margin-bottom: 15px; font-size: 0.85rem; cursor: pointer; }
         
-        /* RESTYLING V10.1: BLINDATURA, TITOLI E POSTER */
         .movie-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
         .detail-main-poster { width: 100%; display: block; border-bottom: 3px solid var(--gold); object-fit: cover; }
-        .movie-info { padding: 20px; width: 100%; box-sizing: border-box; min-width: 0; /* LA GABBIA MAGICA PER L'IPAD */ overflow-wrap: break-word; }
-        
+        .movie-info { padding: 20px; width: 100%; box-sizing: border-box; min-width: 0; overflow-wrap: break-word; }
         .movie-title-frame { background: linear-gradient(135deg, rgba(245, 197, 24, 0.15) 0%, rgba(245, 197, 24, 0.02) 100%); border-left: 4px solid var(--gold); border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .movie-title-frame h2 { margin: 0; font-size: 1.8rem; color: #fff; font-family: 'Montserrat'; font-weight: 900; line-height: 1.2; text-transform: uppercase; }
-        
         .plot-box { font-size: 0.95rem; line-height: 1.6; color: #ddd; max-width: 100%; margin-top: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
 
         .data-label { color: var(--gold); font-weight: 900; font-family: 'Montserrat'; font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; display: block; }
@@ -99,7 +96,6 @@
         @media (min-width: 769px) {
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
             
-            /* RESTYLING PC V10.1: IL POSTER FISICO */
             .movie-card { flex-direction: row !important; padding: 20px !important; gap: 30px !important; background: transparent !important; border: none !important; align-items: flex-start !important; }
             .detail-main-poster { width: 350px !important; flex-shrink: 0 !important; max-width: 40% !important; border-radius: 16px !important; border: 1px solid rgba(255,255,255,0.1) !important; border-bottom: none !important; box-shadow: 0 20px 40px rgba(0,0,0,0.7) !important; }
             .movie-info { background: var(--card-bg); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); padding: 30px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -115,8 +111,8 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.1</h1>
-        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Premium UI Patch</p>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.2</h1>
+        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">TV Series Database Update</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
 
@@ -650,6 +646,25 @@
                 }
             }
 
+            // MOTORE ESTRAZIONE DATI TV V10.2
+            let tvStatusHtml = "";
+            let tvStructureHtml = "";
+            if (isTV) {
+                let statusText = "SCONOSCIUTO";
+                let statusColor = "#555";
+                if (tmdb.status === "Returning Series") { statusText = "IN CORSO"; statusColor = "var(--green)"; }
+                else if (tmdb.status === "Ended") { statusText = "CONCLUSA"; statusColor = "var(--red)"; }
+                else if (tmdb.status === "Canceled") { statusText = "CANCELLATA"; statusColor = "var(--red)"; }
+                else if (tmdb.status) { statusText = tmdb.status.toUpperCase(); }
+
+                tvStatusHtml = `<span style="font-size:0.65rem; background:${statusColor}; color:#000; padding:2px 6px; border-radius:4px; margin-left:10px; font-weight:900; vertical-align:middle; letter-spacing:0px;">${statusText}</span>`;
+
+                let stagioni = tmdb.number_of_seasons || 0;
+                let episodi = tmdb.number_of_episodes || 0;
+                let sWord = stagioni === 1 ? 'Stagione' : 'Stagioni';
+                tvStructureHtml = `<span class="data-label">Struttura</span><span class="data-value">${stagioni} ${sWord} &bull; ${episodi} Episodi totali</span>`;
+            }
+
             let finalDirector = "N/D";
             let directorHtml = "N/D";
             
@@ -733,15 +748,15 @@
             
             const c = document.createElement('div'); c.className = 'movie-card';
             
-            // L'INIEZIONE DEL NUOVO DESIGN TITOLO E POSTER V10.1
             c.innerHTML = `
                 <img id="detail-poster-${m.id}" src="${post}" class="detail-main-poster">
                 <div class="movie-info">
                     <div class="movie-title-frame"><h2>${m.title}</h2></div>
                     <div id="rating-container-${m.id}" style="min-height: 24px; margin-bottom: 10px;"></div>
-                    <span class="data-label">Uscita (Cinema IT)</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'}</span>
+                    <span class="data-label">Uscita ${isTV ? '(Prima TV)' : '(Cinema IT)'}</span><span class="data-value" style="color:var(--gold); font-weight:bold;">${m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D'} ${tvStatusHtml}</span>
                     <span class="data-label">Produzione</span><span class="data-value">${m.paese}</span>
                     <span class="data-label">Genere</span><span class="data-value">${m.genres}</span>
+                    ${tvStructureHtml}
                     <span class="data-label">${m.isTV ? 'Ideatore' : 'Regia'}</span><span class="data-value">${directorHtml}</span>
                     <span class="data-label">Cast Principale</span>${castHtmlDesktop}
                     <div id="streaming-providers-${m.id}"></div>
