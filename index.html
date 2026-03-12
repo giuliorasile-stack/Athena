@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.3 Premium</title>
+    <title>Athena Lab V10.4 Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -119,8 +119,8 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.3</h1>
-        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Cinema UI Patch</p>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.4</h1>
+        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Purist Algorithm Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
 
@@ -428,7 +428,13 @@
                         const res_credits = await fetch(`https://api.themoviedb.org/3/person/${p_id}/tv_credits?api_key=${TMDB_API_KEY}&language=it-IT`);
                         const data_credits = await res_credits.json();
                         (data_credits.cast || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
-                        (data_credits.crew || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
+                        
+                        // V10.4 FIX: Filtro purista anche nella ricerca a strascico TV
+                        (data_credits.crew || []).forEach(tv => { 
+                            if(tv.job === 'Director' || tv.job === 'Creator') { 
+                                if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); 
+                            } 
+                        });
                     }
                 } else {
                     const todayStr = new Date().toISOString().split('T')[0];
@@ -560,10 +566,22 @@
                     const data_person = await res_person.json();
                     if (data_person.results && data_person.results.length > 0) {
                         const p_id = data_person.results[0].id;
-                        let url_discover_base = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=it-IT&region=IT&with_cast=${p_id}&sort_by=release_date.desc`;
-                        if (country && COUNTRY_ISO_MAP[country]) url_discover_base += `&with_origin_country=${COUNTRY_ISO_MAP[country]}`;
-                        const res_p1 = await fetch(url_discover_base + "&page=1"); const data_p1 = await res_p1.json();
-                        (data_p1.results || []).forEach(m => { 
+                        
+                        // V10.4 FIX: ESTRAZIONE PURISTA IDENTICA AL DOSSIER
+                        const res_credits = await fetch(`https://api.themoviedb.org/3/person/${p_id}/movie_credits?api_key=${TMDB_API_KEY}&language=it-IT`);
+                        const data_credits = await res_credits.json();
+                        
+                        let castCredits = data_credits.cast || [];
+                        let crewCredits = data_credits.crew || [];
+                        let directingCredits = crewCredits.filter(c => c.job === 'Director');
+                        
+                        let allCredits = [...castCredits, ...directingCredits];
+                        
+                        let uniqueCreditsMap = new Map();
+                        allCredits.forEach(c => uniqueCreditsMap.set(c.id, c));
+                        let finalPersonCredits = Array.from(uniqueCreditsMap.values());
+                        
+                        finalPersonCredits.forEach(m => { 
                             m.isTV = false; 
                             if (risultati_totali.has(String(m.id))) { 
                                 risultati_totali.get(String(m.id)).release_date = m.release_date || risultati_totali.get(String(m.id)).release_date; 
@@ -571,25 +589,6 @@
                                 risultati_totali.set(String(m.id), m); 
                             } 
                         }); 
-                        
-                        const tot_pages_fetch = Math.min(data_p1.total_pages || 1, 20);
-                        if (tot_pages_fetch > 1) {
-                            let pagesData = [];
-                            const isIOSMobile = /iPhone|iPad|iPod/.test(navigator.userAgent);
-                            if (isIOSMobile) {
-                                for (let p = 2; p <= tot_pages_fetch; p++) { try { const res = await fetch(url_discover_base + `&page=${p}`); pagesData.push(await res.json()); } catch(e) { } }
-                            } else {
-                                const pagePromises = []; for (let p = 2; p <= tot_pages_fetch; p++) { pagePromises.push(fetch(url_discover_base + `&page=${p}`).then(r => r.json())); } pagesData = await Promise.all(pagePromises);
-                            }
-                            pagesData.forEach(pd => { (pd.results || []).forEach(m => { 
-                                m.isTV = false; 
-                                if (risultati_totali.has(String(m.id))) { 
-                                    risultati_totali.get(String(m.id)).release_date = m.release_date || risultati_totali.get(String(m.id)).release_date; 
-                                } else if (validateMovie(m, true)) { 
-                                    risultati_totali.set(String(m.id), m); 
-                                } 
-                            }); }); 
-                        }
                     }
                 } else {
                     let datasets = [];
@@ -865,20 +864,16 @@
                 const birthday = person.birthday ? person.birthday.split('-').reverse().join('/') : 'N/D';
                 const placeOfBirth = person.place_of_birth || 'N/D';
 
-                // ESTRAZIONE IBRIDA (ATTORI + REGISTI/IDEATORI)
                 let castCredits = person.combined_credits.cast || [];
                 let crewCredits = person.combined_credits.crew || [];
                 
-                // Filtriamo la crew solo per ruoli principali (Regia o Ideatore) per non inquinare con ruoli minori
                 let directingCredits = crewCredits.filter(c => c.job === 'Director' || c.job === 'Creator');
                 
-                // Uniamo le carriere ed eliminiamo i doppioni (es. se ha sia recitato che diretto lo stesso film)
                 let allCredits = [...castCredits, ...directingCredits];
                 let uniqueCreditsMap = new Map();
                 allCredits.forEach(c => uniqueCreditsMap.set(c.id, c));
                 let credits = Array.from(uniqueCreditsMap.values());
 
-                // Ordine cronologico dal più recente
                 credits.sort((a, b) => {
                     const dateA = a.release_date || a.first_air_date || '1900-01-01';
                     const dateB = b.release_date || b.first_air_date || '1900-01-01';
@@ -896,7 +891,6 @@
                     const poster = c.poster_path ? `https://image.tmdb.org/t/p/w300${c.poster_path}` : 'https://via.placeholder.com/300x450/111/fff?text=NO+POSTER';
                     const icon = isTV ? '📺' : '🎥';
                     
-                    // Badge del Ruolo: Specifica se era attore o regista
                     const roleText = c.character ? `Cast: ${c.character}` : (c.job ? `Ruolo: ${c.job}` : '');
                     const characterHtml = roleText ? `<div style="font-size:0.6rem; color:#888; text-align:center; padding-bottom:5px; padding-left:4px; padding-right:4px;">${roleText}</div>` : '';
 
