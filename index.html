@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.2 Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Athena Lab V10.3 Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <style>
@@ -64,10 +64,12 @@
 
         .btn-save { background: var(--green); color: #000; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 10px; cursor: pointer; }
         .btn-trailer { background: #ff0000; color: #fff; width: 100%; padding: 15px; border-radius: 12px; font-weight: 900; border: none; margin-top: 25px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        
         .wl-item { display: flex; align-items: center; background: #1a1a1a; padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #333; }
         .wl-poster { width: 50px; height: 75px; border-radius: 6px; margin-right: 15px; object-fit: cover; cursor: pointer; }
         .wl-content { flex: 1; cursor: pointer; }
         .btn-delete-wl { background: rgba(231, 76, 60, 0.1); color: var(--red); border: 1px solid var(--red); padding: 8px 12px; border-radius: 8px; font-weight: 900; cursor: pointer; }
+        
         .hide-without-db { display: none !important; }
         .providers-flex { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .provider-logo { width: 35px; height: 35px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #fff; }
@@ -78,7 +80,6 @@
         .actor-scroll-card:hover { transform: scale(1.05); border-color: var(--gold); z-index: 10; }
         .actor-pic { width: 100%; height: 135px; object-fit: cover; display: block; }
         .cast-name-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); color: white; font-size: 0.65rem; text-align: center; padding: 6px 2px; font-weight: 700; box-sizing: border-box; }
-
         .is-touch-device .actor-scroll-box { cursor: grab; }
         .is-touch-device .actor-scroll-box:active { cursor: grabbing; }
 
@@ -93,14 +94,21 @@
         .actor-meta { font-size: 0.85rem; color: var(--gold); margin-bottom: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
         .actor-bio { font-size: 0.95rem; line-height: 1.6; color: #ddd; text-align: left; width: 100%; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
 
+        /* V10.3: RESTYLING BOTTONI CINEMA E GPS */
+        .btn-gps { background: linear-gradient(45deg, var(--red), #c0392b); color: #fff; width: 100%; padding: 18px; border-radius: 16px; border: none; font-weight: 900; font-family: 'Montserrat'; letter-spacing: 1px; margin-bottom: 25px; cursor: pointer; box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3); transition: transform 0.2s; }
+        .btn-gps:active { transform: scale(0.98); }
+        
+        .cinema-btn { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245, 197, 24, 0.3); padding: 16px 20px; border-radius: 16px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: all 0.3s ease; width: 100%; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .cinema-btn:hover { border-color: var(--gold); background: rgba(245, 197, 24, 0.08); transform: translateY(-2px); }
+        .cinema-icon { font-size: 1.6rem; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .cinema-name { color: var(--gold); font-family: 'Montserrat'; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; }
+
         @media (min-width: 769px) {
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
-            
             .movie-card { flex-direction: row !important; padding: 20px !important; gap: 30px !important; background: transparent !important; border: none !important; align-items: flex-start !important; }
             .detail-main-poster { width: 350px !important; flex-shrink: 0 !important; max-width: 40% !important; border-radius: 16px !important; border: 1px solid rgba(255,255,255,0.1) !important; border-bottom: none !important; box-shadow: 0 20px 40px rgba(0,0,0,0.7) !important; }
             .movie-info { background: var(--card-bg); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); padding: 30px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
             .movie-title-frame h2 { font-size: 2.2rem !important; }
-            
             .actor-profile-header { flex-direction: row !important; align-items: flex-start !important; padding: 30px !important; gap: 30px !important; }
             .actor-avatar { width: 250px !important; height: 250px !important; }
             .actor-name { text-align: left !important; font-size: 2.2rem !important; }
@@ -111,8 +119,8 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.2</h1>
-        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">TV Series Database Update</p>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.3</h1>
+        <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Cinema UI Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
 
@@ -241,15 +249,27 @@
     </div>
 
     <div id="tab-cinema" class="tab-content">
-        <button class="btn-search" style="background:var(--red); color:#fff; width:100%; padding:15px; border-radius:12px; border:none; font-weight:800; margin-bottom: 20px;" onclick="window.open('https://www.google.com/search?q=cinema+vicino+a+me+orari','_blank')">📍 CINEMA VICINO A ME (GPS)</button>
-        <h3 style="color: #fff; margin: 20px 0 10px; font-size: 0.9rem; text-align: center; font-family: 'Montserrat';">I TUOI PREFERITI</h3>
-        <div style="display:grid; gap:10px;">
-            <button onclick="window.open('https://www.facebook.com/supercinemacastello/#','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 SUPERCINEMA (Fondi)</button>
-            <button onclick="window.open('https://www.facebook.com/cinemaugusto/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 AUGUSTO (Sperlonga)</button>
-            <button onclick="window.open('https://www.cinemateatrotraiano.it/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 TRAIANO (Terracina)</button>
-            <button onclick="window.open('https://www.riocinemamultisala.com/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 RIO (Terracina)</button>
-            <button onclick="window.open('https://www.aristongaeta.it/programmazione-cinema/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 ARISTON (Gaeta)</button>
-            <button onclick="window.open('https://multisaladelmare.18tickets.it/','_blank')" style="background:#1a1a1a; color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:10px; font-weight:800;">🍿 DEL MARE (Formia)</button>
+        <button class="btn-gps" onclick="window.open('https://www.google.com/search?q=cinema+vicino+a+me+orari','_blank')">📍 TROVA CINEMA VICINO A ME</button>
+        <h3 style="color: #fff; margin: 20px 0 15px; font-size: 1rem; text-align: center; font-family: 'Montserrat'; font-weight: 900; letter-spacing: 2px;">I TUOI PREFERITI</h3>
+        <div style="display:grid; gap:12px;">
+            <button class="cinema-btn" onclick="window.open('https://www.facebook.com/supercinemacastello/#','_blank')">
+                <span class="cinema-icon">🍿</span><span class="cinema-name">Supercinema Castello - Fondi</span>
+            </button>
+            <button class="cinema-btn" onclick="window.open('https://www.facebook.com/cinemaugusto/','_blank')">
+                <span class="cinema-icon">🍿</span><span class="cinema-name">Cinema Augusto - Sperlonga</span>
+            </button>
+            <button class="cinema-btn" onclick="window.open('https://www.cinemateatrotraiano.it/','_blank')">
+                <span class="cinema-icon">🍿</span><span class="cinema-name">CINEMA TEATRO TRAIANO - TERRACINA</span>
+            </button>
+            <button class="cinema-btn" onclick="window.open('https://www.riocinemamultisala.com/','_blank')">
+                <span class="cinema-icon">🍿</span><span class="cinema-name">Cinema Rio Multisala - Terracina</span>
+            </button>
+            <button class="cinema-btn" onclick="window.open('https://www.aristongaeta.it/programmazione-cinema/','_blank')">
+                <span class="cinema-icon">🍿</span><span class="cinema-name">Cinema Teatro Ariston - Gaeta</span>
+            </button>
+            <button class="cinema-btn" onclick="window.open('https://multisaladelmare.18tickets.it/','_blank')">
+                <span class="cinema-icon">🍿</span><span class="cinema-name">Multisala Del Mare - Formia</span>
+            </button>
         </div>
     </div>
 
@@ -646,7 +666,6 @@
                 }
             }
 
-            // MOTORE ESTRAZIONE DATI TV V10.2
             let tvStatusHtml = "";
             let tvStructureHtml = "";
             if (isTV) {
