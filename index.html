@@ -562,18 +562,17 @@
                 const matchType = !typeQuery || (m.release_type && m.release_type.includes(typeQuery));
                 const matchGenre = !genreQuery || (m.genres && m.genres.toLowerCase().includes(genreQuery));
                 
+                // --- ALGORITMO PURISTA DEL VOTO (SOLO IMDB) ---
                 let matchRating = true;
                 if (minRating > 0) {
                     let actualRating = 0.0;
                     
+                    // Ghigliottina: si valuta ESCLUSIVAMENTE IMDb. Niente scialuppe di salvataggio TMDB.
                     if (m.imdb_rating && parseFloat(m.imdb_rating) > 0) {
                         actualRating = parseFloat(m.imdb_rating);
-                    } else if (m.tmdb_rating && parseFloat(m.tmdb_rating) > 0) {
-                        actualRating = parseFloat(m.tmdb_rating);
-                    } else if (m.vote_average && parseFloat(m.vote_average) > 0) {
-                        actualRating = parseFloat(m.vote_average);
                     }
                     
+                    // Se non ha IMDb, actualRating rimane 0.0 e il film viene scartato.
                     matchRating = actualRating > 0.0 && actualRating >= minRating;
                 }
 
