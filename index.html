@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.6 Premium</title>
+    <title>Athena Lab V10.6.2 Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -120,7 +120,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.6</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.6.2</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Purist Algorithm Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -289,6 +289,7 @@
         let accessToken = null, vaultFileId = null;
         let currentVault = []; 
         let currentMovieArray = [], currentSortMode = 'recent_desc', currentViewMode = 'list';
+        let isTimeMachineMode = false; // IL SENSORE DELLA SALA
         let lastScrollPos = 0, localDB = [];
         let isTVMode = false;
 
@@ -504,6 +505,8 @@
         }
 
         async function fetchTimeMachine() { 
+            isTimeMachineMode = true; // Accende il sensore
+            currentSortMode = 'recent_desc'; // Forza l'ordinamento cronologico
             const rc = document.getElementById('resultsContainer'); 
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Ricerca in corso (Oggi al Cinema)...</p>'; 
             const past = new Date(); past.setDate(past.getDate() - 30); 
@@ -531,6 +534,7 @@
         }
 
         async function searchManual() {
+            isTimeMachineMode = false; // Spegne il sensore
             const query = document.getElementById('manualSearch').value.toLowerCase().trim();
             const yearFrom = document.getElementById('filterYearFrom').value;
             const yearTo = document.getElementById('filterYearTo').value;
@@ -659,13 +663,14 @@
             const containerId = forTV ? 'tvResults' : 'resultsContainer';
             const container = document.getElementById(containerId); container.innerHTML = '';
             
-            // --- MOTORE MATEMATICO DI ORDINAMENTO ---
+            // --- MOTORE MATEMATICO DI ORDINAMENTO V10.6.2.1 (CON FALLBACK LOGICO) ---
             currentMovieArray.sort((a, b) => {
                 if (currentSortMode === 'recent_desc') return new Date(b.release_date || 0) - new Date(a.release_date || 0);
                 if (currentSortMode === 'recent_asc') return new Date(a.release_date || 0) - new Date(b.release_date || 0);
                 if (currentSortMode === 'rating_desc') {
-                    const rA = a.imdb_rating && parseFloat(a.imdb_rating) > 0 ? parseFloat(a.imdb_rating) : 0;
-                    const rB = b.imdb_rating && parseFloat(b.imdb_rating) > 0 ? parseFloat(b.imdb_rating) : 0;
+                    // Cerca l'eccellenza (IMDb). Se non c'è (film live in sala), usa TMDB per non rompere l'interfaccia.
+                    const rA = a.imdb_rating && parseFloat(a.imdb_rating) > 0 ? parseFloat(a.imdb_rating) : (a.tmdb_rating ? parseFloat(a.tmdb_rating) : (a.vote_average ? parseFloat(a.vote_average) : 0));
+                    const rB = b.imdb_rating && parseFloat(b.imdb_rating) > 0 ? parseFloat(b.imdb_rating) : (b.tmdb_rating ? parseFloat(b.tmdb_rating) : (b.vote_average ? parseFloat(b.vote_average) : 0));
                     return rB - rA; // Dal più alto al più basso
                 }
                 return 0;
@@ -677,12 +682,16 @@
             const frag = document.createDocumentFragment();
             const ctrl = document.createElement('div'); 
             
-            // --- CRUSCOTTO DINAMICO ---
+            // --- CRUSCOTTO DINAMICO CAMALEONTICO ---
             const recentArrow = currentSortMode === 'recent_asc' ? ' 🔼' : ' 🔽';
+            
+            // Se siamo In Sala, evapora il tasto Migliori. Altrimenti lo disegna.
+            const ratingButtonHtml = isTimeMachineMode ? '' : `<div class="sort-btn desktop-only ${currentSortMode === 'rating_desc' ? 'active' : ''}" onclick="toggleSort('rating')">🏆 MIGLIORI (IMDb)</div>`;
+            
             ctrl.innerHTML = `
                 <div class="sort-toggle">
                     <div class="sort-btn ${currentSortMode.startsWith('recent') ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI${currentSortMode.startsWith('recent') ? recentArrow : ''}</div>
-                    <div class="sort-btn desktop-only ${currentSortMode === 'rating_desc' ? 'active' : ''}" onclick="toggleSort('rating')">🏆 MIGLIORI (IMDb)</div>
+                    ${ratingButtonHtml}
                 </div>
                 <div class="view-toggle">
                     <div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div>
@@ -697,11 +706,23 @@
                 item.addEventListener('click', () => openDetails(m.id, m.isTV));
                 const icon = m.isTV ? "📺" : getIcon(m.release_type);
                 
-                // Determina cosa mostrare nel badge (Data o Voto)
+                // --- GENERATORE DI BADGE (ORO VS ARGENTO) ---
                 let badgeText = m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D';
                 if (currentSortMode === 'rating_desc') {
-                    const rt = m.imdb_rating && parseFloat(m.imdb_rating) > 0 ? parseFloat(m.imdb_rating).toFixed(1) : 'N/D';
-                    badgeText = `🏆 ${rt}`;
+                    let val = 0;
+                    let iconLabel = '🏆'; // Default: Oro per IMDb
+                    
+                    if (m.imdb_rating && parseFloat(m.imdb_rating) > 0) {
+                        val = parseFloat(m.imdb_rating).toFixed(1);
+                    } else if (m.tmdb_rating && parseFloat(m.tmdb_rating) > 0) {
+                        val = parseFloat(m.tmdb_rating).toFixed(1);
+                        iconLabel = '⭐'; // Argento: TMDB locale
+                    } else if (m.vote_average && parseFloat(m.vote_average) > 0) {
+                        val = parseFloat(m.vote_average).toFixed(1);
+                        iconLabel = '⭐'; // Argento: TMDB rete live
+                    }
+                    
+                    badgeText = val > 0 ? `${iconLabel} ${val}` : 'N/D';
                 }
                 
                 if (currentViewMode === 'grid') {
@@ -723,7 +744,6 @@
             });
             frag.appendChild(wrapper); container.appendChild(frag);
         }
-
         async function openDetails(id, isTV = false) {
             lastScrollPos = window.scrollY;
             let m = localDB.find(x => String(x.id) === String(id) && x.isTV === isTV);
