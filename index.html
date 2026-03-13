@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.5 Premium</title>
+    <title>Athena Lab V10.6 Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -102,7 +102,9 @@
         .cinema-icon { font-size: 1.6rem; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .cinema-name { color: var(--gold); font-family: 'Montserrat'; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; }
 
+        .desktop-only { display: none !important; }
         @media (min-width: 769px) {
+            .sort-btn.desktop-only { display: block !important; }
             .movies-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
             .movie-card { flex-direction: row !important; padding: 20px !important; gap: 30px !important; background: transparent !important; border: none !important; align-items: flex-start !important; }
             .detail-main-poster { width: 350px !important; flex-shrink: 0 !important; max-width: 40% !important; border-radius: 16px !important; border: 1px solid rgba(255,255,255,0.1) !important; border-bottom: none !important; box-shadow: 0 20px 40px rgba(0,0,0,0.7) !important; }
@@ -118,7 +120,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.5</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.6</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Purist Algorithm Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -286,7 +288,7 @@
         
         let accessToken = null, vaultFileId = null;
         let currentVault = []; 
-        let currentMovieArray = [], currentSortMode = 'recent', currentViewMode = 'list';
+        let currentMovieArray = [], currentSortMode = 'recent_desc', currentViewMode = 'list';
         let lastScrollPos = 0, localDB = [];
         let isTVMode = false;
 
@@ -657,21 +659,54 @@
             const containerId = forTV ? 'tvResults' : 'resultsContainer';
             const container = document.getElementById(containerId); container.innerHTML = '';
             
-            currentMovieArray.sort((a, b) => currentSortMode === 'recent' ? new Date(b.release_date || 0) - new Date(a.release_date || 0) : (b.popularity || 0) - (a.popularity || 0));
+            // --- MOTORE MATEMATICO DI ORDINAMENTO ---
+            currentMovieArray.sort((a, b) => {
+                if (currentSortMode === 'recent_desc') return new Date(b.release_date || 0) - new Date(a.release_date || 0);
+                if (currentSortMode === 'recent_asc') return new Date(a.release_date || 0) - new Date(b.release_date || 0);
+                if (currentSortMode === 'rating_desc') {
+                    const rA = a.imdb_rating && parseFloat(a.imdb_rating) > 0 ? parseFloat(a.imdb_rating) : 0;
+                    const rB = b.imdb_rating && parseFloat(b.imdb_rating) > 0 ? parseFloat(b.imdb_rating) : 0;
+                    return rB - rA; // Dal più alto al più basso
+                }
+                return 0;
+            });
+
             const countMsg = document.createElement('div'); countMsg.style = "text-align:center; color:#aaa; font-size:0.75rem; margin-bottom:10px;";
             countMsg.textContent = `Risultati estratti: ${currentMovieArray.length}`; container.appendChild(countMsg);
+            
             const frag = document.createDocumentFragment();
-            const ctrl = document.createElement('div'); ctrl.innerHTML = `<div class="sort-toggle"><div class="sort-btn ${currentSortMode === 'recent' ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI</div><div class="sort-btn ${currentSortMode === 'popular' ? 'active' : ''}" onclick="toggleSort('popular')">🔥 POPOLARITÀ</div></div><div class="view-toggle"><div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div><div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div></div>`;
+            const ctrl = document.createElement('div'); 
+            
+            // --- CRUSCOTTO DINAMICO ---
+            const recentArrow = currentSortMode === 'recent_asc' ? ' 🔼' : ' 🔽';
+            ctrl.innerHTML = `
+                <div class="sort-toggle">
+                    <div class="sort-btn ${currentSortMode.startsWith('recent') ? 'active' : ''}" onclick="toggleSort('recent')">📅 RECENTI${currentSortMode.startsWith('recent') ? recentArrow : ''}</div>
+                    <div class="sort-btn desktop-only ${currentSortMode === 'rating_desc' ? 'active' : ''}" onclick="toggleSort('rating')">🏆 MIGLIORI (IMDb)</div>
+                </div>
+                <div class="view-toggle">
+                    <div class="view-btn ${currentViewMode === 'grid' ? 'active' : ''}" onclick="toggleView('grid')">🖼️ GRIGLIA</div>
+                    <div class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">📄 ELENCO</div>
+                </div>`;
             frag.appendChild(ctrl);
+            
             const wrapper = document.createElement('div'); wrapper.className = currentViewMode === 'grid' ? 'movies-grid' : 'list-view-container';
+            
             currentMovieArray.forEach(m => {
                 const item = document.createElement('div'); item.className = currentViewMode === 'grid' ? 'grid-item' : 'list-item';
                 item.addEventListener('click', () => openDetails(m.id, m.isTV));
                 const icon = m.isTV ? "📺" : getIcon(m.release_type);
                 
+                // Determina cosa mostrare nel badge (Data o Voto)
+                let badgeText = m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D';
+                if (currentSortMode === 'rating_desc') {
+                    const rt = m.imdb_rating && parseFloat(m.imdb_rating) > 0 ? parseFloat(m.imdb_rating).toFixed(1) : 'N/D';
+                    badgeText = `🏆 ${rt}`;
+                }
+                
                 if (currentViewMode === 'grid') {
                     if (icon) { const tb = document.createElement('div'); tb.className = 'type-badge'; tb.textContent = icon; item.appendChild(tb); }
-                    const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = currentSortMode === 'popular' ? `🔥 ${Math.round(m.popularity)}` : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D');
+                    const b = document.createElement('div'); b.className = 'movie-badge'; b.textContent = badgeText;
                     const img = document.createElement('img'); img.className = 'grid-poster'; 
                     if (m.poster_path) {
                         img.src = m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path;
@@ -681,7 +716,7 @@
                     const t = document.createElement('div'); t.className = 'grid-title'; t.textContent = m.title; item.append(b, img, t);
                 } else {
                     const t = document.createElement('div'); t.className = 'list-title'; t.textContent = (icon ? icon + ' ' : '') + m.title;
-                    const d = document.createElement('div'); d.className = 'list-data-dynamic'; d.innerHTML = `${currentSortMode === 'popular' ? '🔥 '+Math.round(m.popularity) : (m.release_date ? m.release_date.split('-').reverse().join('/') : 'N/D')}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span>`;
+                    const d = document.createElement('div'); d.className = 'list-data-dynamic'; d.innerHTML = `${badgeText}<br><span style="font-size:0.6rem; color:#888;">${m.paese || ''}</span>`;
                     item.append(t, d);
                 }
                 wrapper.appendChild(item);
@@ -1017,7 +1052,16 @@
             } 
         }
 
-        function toggleSort(m) { currentSortMode = m; renderUI(isTVMode); }
+        // --- GESTIONE DEI CLICK SUI BOTTONI (IL TOGGLE LOGICO) ---
+        function toggleSort(baseMode) { 
+            if (baseMode === 'recent') {
+                currentSortMode = (currentSortMode === 'recent_desc') ? 'recent_asc' : 'recent_desc';
+            } else if (baseMode === 'rating') {
+                currentSortMode = 'rating_desc'; // I voti sono solo Top-Down
+            }
+            renderUI(isTVMode); 
+        }
+        
         function toggleView(m) { currentViewMode = m; renderUI(isTVMode); }
     </script>
 </body>
