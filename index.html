@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.4 Premium</title>
+    <title>Athena Lab V10.5 Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -94,7 +94,6 @@
         .actor-meta { font-size: 0.85rem; color: var(--gold); margin-bottom: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
         .actor-bio { font-size: 0.95rem; line-height: 1.6; color: #ddd; text-align: left; width: 100%; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
 
-        /* V10.3: RESTYLING BOTTONI CINEMA E GPS */
         .btn-gps { background: linear-gradient(45deg, var(--red), #c0392b); color: #fff; width: 100%; padding: 18px; border-radius: 16px; border: none; font-weight: 900; font-family: 'Montserrat'; letter-spacing: 1px; margin-bottom: 25px; cursor: pointer; box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3); transition: transform 0.2s; }
         .btn-gps:active { transform: scale(0.98); }
         
@@ -119,7 +118,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.4</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.5</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Purist Algorithm Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -163,6 +162,10 @@
                     <select id="filterCountry">
                         <option value="">Tutte le nazioni</option>
                     </select>
+                </div>
+                <div id="filter-rating-group" class="filter-group hide-without-db adv-filter">
+                    <label>Voto Min. (IMDb)</label>
+                    <input type="number" id="filterMinRating" placeholder="es. 6.5" step="0.1" min="0" max="10">
                 </div>
                 <div id="filter-type-group" class="filter-group hide-without-db adv-filter">
                     <label>Tipologia IT</label>
@@ -393,7 +396,20 @@
                 if (isDesktop && hasDB) el.classList.remove('hide-without-db'); else el.classList.add('hide-without-db');
             });
         }
-        function resetFilters() { document.getElementById('manualSearch').value = ''; document.getElementById('filterYearFrom').value = ''; document.getElementById('filterYearTo').value = ''; document.getElementById('filterCountry').selectedIndex = 0; document.getElementById('search-type').selectedIndex = 0; document.getElementById('search-genre').selectedIndex = 0; currentMovieArray = []; document.getElementById('resultsContainer').innerHTML = ''; if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); }
+        
+        /* --- INNESTO RESET FILTRI --- */
+        function resetFilters() { 
+            document.getElementById('manualSearch').value = ''; 
+            document.getElementById('filterYearFrom').value = ''; 
+            document.getElementById('filterYearTo').value = ''; 
+            document.getElementById('filterCountry').selectedIndex = 0; 
+            if(document.getElementById('filterMinRating')) document.getElementById('filterMinRating').value = '';
+            if(document.getElementById('search-type')) document.getElementById('search-type').selectedIndex = 0; 
+            if(document.getElementById('search-genre')) document.getElementById('search-genre').selectedIndex = 0; 
+            currentMovieArray = []; 
+            document.getElementById('resultsContainer').innerHTML = ''; 
+            if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); 
+        }
         
         function toggleTVFilters() { document.getElementById("tvFiltersPanel").classList.toggle("active"); }
         function resetTVFilters() { document.getElementById('tvSearch').value = ''; document.getElementById('tvFilterYearFrom').value = ''; document.getElementById('tvFilterYearTo').value = ''; document.getElementById('tvFilterCountry').selectedIndex = 0; currentMovieArray = []; document.getElementById('tvResults').innerHTML = ''; if (document.getElementById("tvFiltersPanel").classList.contains("active")) toggleTVFilters(); }
@@ -429,7 +445,6 @@
                         const data_credits = await res_credits.json();
                         (data_credits.cast || []).forEach(tv => { if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); });
                         
-                        // V10.4 FIX: Filtro purista anche nella ricerca a strascico TV
                         (data_credits.crew || []).forEach(tv => { 
                             if(tv.job === 'Director' || tv.job === 'Creator') { 
                                 if(!risultati_totali.has(String(tv.id))) risultati_totali.set(String(tv.id), tv); 
@@ -520,22 +535,49 @@
             const country = document.getElementById('filterCountry').value;
             const typeQuery = document.getElementById('search-type') ? document.getElementById('search-type').value : "";
             const genreQuery = document.getElementById('search-genre') ? document.getElementById('search-genre').value.toLowerCase() : "";
+            
+            /* --- INNESTO RECUPERO VOTO --- */
+            const minRatingInput = document.getElementById('filterMinRating') ? document.getElementById('filterMinRating').value : "";
+            const minRating = minRatingInput ? parseFloat(minRatingInput.replace(',', '.')) : 0;
 
             const rc = document.getElementById('resultsContainer');
-            if(!query && !yearFrom && !yearTo && !country && !typeQuery && !genreQuery) return;
+            if(!query && !yearFrom && !yearTo && !country && !typeQuery && !genreQuery && !minRatingInput) return;
             rc.innerHTML = '<p style="text-align:center; color:#f5c518;">Fusione Database e Rete a Strascico in corso...</p>';
             let risultati_totali = new Map();
             
+            /* --- INNESTO ALGORITMO PURISTA DEL VOTO --- */
             const validateMovie = (m, trustTMDB = false) => {
                 const releaseYear = m.release_date ? parseInt(m.release_date.substring(0,4)) : 0;
                 if ((yearFrom || yearTo) && releaseYear === 0) return false;
+                
                 const matchYearFrom = !yearFrom || releaseYear >= parseInt(yearFrom);
                 const matchYearTo = !yearTo || releaseYear <= parseInt(yearTo);
+                
                 let matchCountry = false;
-                if (!country) { matchCountry = true; } else if (m.paese && m.paese !== "N/D") { const paesiArray = m.paese.split(',').map(c => c.trim()); matchCountry = paesiArray.includes(country); } else if (m.origin_country && m.origin_country.length > 0 && COUNTRY_ISO_MAP[country]) { matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); } else if (trustTMDB) { matchCountry = true; }
+                if (!country) { matchCountry = true; } 
+                else if (m.paese && m.paese !== "N/D") { const paesiArray = m.paese.split(',').map(c => c.trim()); matchCountry = paesiArray.includes(country); } 
+                else if (m.origin_country && m.origin_country.length > 0 && COUNTRY_ISO_MAP[country]) { matchCountry = m.origin_country.includes(COUNTRY_ISO_MAP[country]); } 
+                else if (trustTMDB) { matchCountry = true; }
+                
                 const matchType = !typeQuery || (m.release_type && m.release_type.includes(typeQuery));
                 const matchGenre = !genreQuery || (m.genres && m.genres.toLowerCase().includes(genreQuery));
-                return matchYearFrom && matchYearTo && matchCountry && matchType && matchGenre;
+                
+                let matchRating = true;
+                if (minRating > 0) {
+                    let actualRating = 0.0;
+                    
+                    if (m.imdb_rating && parseFloat(m.imdb_rating) > 0) {
+                        actualRating = parseFloat(m.imdb_rating);
+                    } else if (m.tmdb_rating && parseFloat(m.tmdb_rating) > 0) {
+                        actualRating = parseFloat(m.tmdb_rating);
+                    } else if (m.vote_average && parseFloat(m.vote_average) > 0) {
+                        actualRating = parseFloat(m.vote_average);
+                    }
+                    
+                    matchRating = actualRating > 0.0 && actualRating >= minRating;
+                }
+
+                return matchYearFrom && matchYearTo && matchCountry && matchType && matchGenre && matchRating;
             };
 
             if (localDB.length > 0) {
@@ -567,7 +609,6 @@
                     if (data_person.results && data_person.results.length > 0) {
                         const p_id = data_person.results[0].id;
                         
-                        // V10.4 FIX: ESTRAZIONE PURISTA IDENTICA AL DOSSIER
                         const res_credits = await fetch(`https://api.themoviedb.org/3/person/${p_id}/movie_credits?api_key=${TMDB_API_KEY}&language=it-IT`);
                         const data_credits = await res_credits.json();
                         
