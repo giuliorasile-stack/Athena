@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Athena Lab V10.6.2 Premium</title>
+    <title>Athena Lab V10.7 Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -120,7 +120,7 @@
 <body>
 
     <div id="loginOverlay">
-        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.6.2</h1>
+        <h1 style="color: var(--gold); font-family: 'Montserrat'; font-weight: 900; font-size: 2rem;">ATHENA V10.7</h1>
         <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">The Purist Algorithm Patch</p>
         <button class="btn-search" style="padding: 20px 40px; font-size: 1rem;" onclick="handleAuthClick()">ENTRA NELLA CASSAFORTE</button>
     </div>
@@ -288,9 +288,10 @@
         
         let accessToken = null, vaultFileId = null;
         let currentVault = []; 
+        let navStack = []; // IL FILO DI ARIANNA
         let currentMovieArray = [], currentSortMode = 'recent_desc', currentViewMode = 'list';
         let isTimeMachineMode = false; // IL SENSORE DELLA SALA
-        let lastScrollPos = 0, localDB = [];
+        let localDB = [];
         let isTVMode = false;
 
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
@@ -410,6 +411,8 @@
             if(document.getElementById('search-type')) document.getElementById('search-type').selectedIndex = 0; 
             if(document.getElementById('search-genre')) document.getElementById('search-genre').selectedIndex = 0; 
             currentMovieArray = []; 
+            isTimeMachineMode = false;
+            currentSortMode = 'recent_desc';
             document.getElementById('resultsContainer').innerHTML = ''; 
             if (document.getElementById("filtersPanel").classList.contains("active")) toggleFilters(); 
         }
@@ -663,7 +666,7 @@
             const containerId = forTV ? 'tvResults' : 'resultsContainer';
             const container = document.getElementById(containerId); container.innerHTML = '';
             
-            // --- MOTORE MATEMATICO DI ORDINAMENTO V10.6.2.1 (CON FALLBACK LOGICO) ---
+            // --- MOTORE MATEMATICO DI ORDINAMENTO V10.6.1 (CON FALLBACK LOGICO) ---
             currentMovieArray.sort((a, b) => {
                 if (currentSortMode === 'recent_desc') return new Date(b.release_date || 0) - new Date(a.release_date || 0);
                 if (currentSortMode === 'recent_asc') return new Date(a.release_date || 0) - new Date(b.release_date || 0);
@@ -703,7 +706,10 @@
             
             currentMovieArray.forEach(m => {
                 const item = document.createElement('div'); item.className = currentViewMode === 'grid' ? 'grid-item' : 'list-item';
-                item.addEventListener('click', () => openDetails(m.id, m.isTV));
+                item.addEventListener('click', () => {
+                    navStack = [{type: 'main', scroll: window.scrollY}]; // ANCORAGGIO DEL FILO
+                    openDetails(m.id, m.isTV);
+                });
                 const icon = m.isTV ? "📺" : getIcon(m.release_type);
                 
                 // --- GENERATORE DI BADGE (ORO VS ARGENTO) ---
@@ -744,8 +750,44 @@
             });
             frag.appendChild(wrapper); container.appendChild(frag);
         }
-        async function openDetails(id, isTV = false) {
-            lastScrollPos = window.scrollY;
+
+        // --- I PONTI DI NAVIGAZIONE DEL FILO DI ARIANNA ---
+        function navToActor(movieId, isTV, personId) {
+             navStack.push({type: 'movie', id: movieId, isTV: isTV, scroll: window.scrollY});
+             openActorDetails(personId);
+        }
+
+        function navToMovie(personId, movieId, isTV) {
+             navStack.push({type: 'actor', id: personId, scroll: window.scrollY});
+             openDetails(movieId, isTV);
+        }
+
+        function goBack() {
+            if (navStack.length === 0) {
+                document.getElementById('detail-view').style.display = 'none';
+                document.getElementById('actor-view').style.display = 'none';
+                if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); } 
+                else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
+                renderUI(isTVMode);
+                return;
+            }
+            
+            const lastState = navStack.pop();
+            
+            if (lastState.type === 'main') {
+                document.getElementById('detail-view').style.display = 'none';
+                document.getElementById('actor-view').style.display = 'none';
+                if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; } 
+                else { document.getElementById('main-db-view').style.display = 'block'; }
+                setTimeout(() => window.scrollTo(0, lastState.scroll || 0), 10);
+            } else if (lastState.type === 'movie') {
+                openDetails(lastState.id, lastState.isTV, lastState.scroll);
+            } else if (lastState.type === 'actor') {
+                openActorDetails(lastState.id, lastState.scroll);
+            }
+        }
+
+        async function openDetails(id, isTV = false, restoreScroll = 0) {
             let m = localDB.find(x => String(x.id) === String(id) && x.isTV === isTV);
             
             const fetchType = isTV ? 'tv' : 'movie';
@@ -784,20 +826,20 @@
             if (isTV) {
                 if (tmdb.created_by && tmdb.created_by.length > 0) {
                     finalDirector = tmdb.created_by.map(c => c.name).join(', ');
-                    directorHtml = tmdb.created_by.map(c => `<span class="clickable-name" onclick="event.stopPropagation(); openActorDetails(${c.id})">${c.name}</span>`).join(', ');
+                    directorHtml = tmdb.created_by.map(c => `<span class="clickable-name" onclick="event.stopPropagation(); navToActor(${m ? m.id : tmdb.id}, ${isTV}, ${c.id})">${c.name}</span>`).join(', ');
                 }
                 else if (tmdb.aggregate_credits?.crew) { 
                     let dir = tmdb.aggregate_credits.crew.find(p => p.job === 'Director' || p.department === 'Directing'); 
                     if (dir) {
                         finalDirector = dir.name;
-                        directorHtml = `<span class="clickable-name" onclick="event.stopPropagation(); openActorDetails(${dir.id})">${dir.name}</span>`;
+                        directorHtml = `<span class="clickable-name" onclick="event.stopPropagation(); navToActor(${m ? m.id : tmdb.id}, ${isTV}, ${dir.id})">${dir.name}</span>`;
                     }
                 }
             } else {
                 let dir = tmdb.credits?.crew?.find(p => p.job === 'Director');
                 if (dir) {
                     finalDirector = dir.name;
-                    directorHtml = `<span class="clickable-name" onclick="event.stopPropagation(); openActorDetails(${dir.id})">${dir.name}</span>`;
+                    directorHtml = `<span class="clickable-name" onclick="event.stopPropagation(); navToActor(${m ? m.id : tmdb.id}, ${isTV}, ${dir.id})">${dir.name}</span>`;
                 }
             }
 
@@ -834,7 +876,7 @@
             } else {
                 rawCastArray.forEach(a => {
                     const imgPath = a.profile_path ? `https://image.tmdb.org/t/p/w185${a.profile_path}` : 'https://via.placeholder.com/185x278/111/f5c518?text=NO+FOTO';
-                    castHtmlDesktop += `<div class="actor-scroll-card" onclick="openActorDetails(${a.id})"><img src="${imgPath}" class="actor-pic" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
+                    castHtmlDesktop += `<div class="actor-scroll-card" onclick="navToActor(${m.id}, ${isTV}, ${a.id})"><img src="${imgPath}" class="actor-pic" loading="lazy"><div class="cast-name-overlay">${a.name}</div></div>`;
                 });
             }
             castHtmlDesktop += '</div>';
@@ -851,13 +893,7 @@
             const dv = document.getElementById('detail-view'); dv.style.display = 'block'; dv.innerHTML = '';
             
             const b = document.createElement('button'); b.className = 'btn-back'; b.textContent = '← TORNA'; 
-            b.onclick = () => { 
-                dv.style.display = 'none'; 
-                if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); } 
-                else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
-                renderUI(isTVMode); 
-                setTimeout(() => window.scrollTo(0, lastScrollPos), 10); 
-            };
+            b.onclick = goBack;
             
             const c = document.createElement('div'); c.className = 'movie-card';
             
@@ -883,7 +919,8 @@
                 let finalPoster = m.poster_path ? (m.poster_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : m.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
                 saveToWL(m.id, m.title, finalPoster, m.release_date, m.isTV); 
             };
-            c.querySelector('.movie-info').appendChild(s); dv.append(b, c); window.scrollTo(0, 0);
+            c.querySelector('.movie-info').appendChild(s); dv.append(b, c); 
+            if (restoreScroll > 0) { setTimeout(() => window.scrollTo(0, restoreScroll), 10); } else { window.scrollTo(0, 0); }
 
             const ratingContainer = document.getElementById(`rating-container-${m.id}`);
             const detailImg = document.getElementById(`detail-poster-${m.id}`);
@@ -929,7 +966,7 @@
             }).catch(() => {});
         }
 
-        async function openActorDetails(personId) {
+        async function openActorDetails(personId, restoreScroll = 0) {
             document.getElementById('detail-view').style.display = 'none';
             document.getElementById('main-db-view').style.display = 'none';
             if(document.getElementById('main-tv-view')) document.getElementById('main-tv-view').style.display = 'none';
@@ -937,7 +974,7 @@
             const av = document.getElementById('actor-view');
             av.style.display = 'block';
             av.innerHTML = '<p style="text-align:center; color:var(--gold); margin-top:50px;">Apertura Dossier Personaggio...</p>';
-            window.scrollTo(0, 0);
+            if (restoreScroll === 0) window.scrollTo(0, 0);
 
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/person/${personId}?api_key=${TMDB_API_KEY}&language=it-IT&append_to_response=combined_credits`);
@@ -945,14 +982,8 @@
 
                 const b = document.createElement('button');
                 b.className = 'btn-back';
-                b.textContent = '← TORNA ALLA RICERCA';
-                b.onclick = () => {
-                    av.style.display = 'none';
-                    if (isTVMode) { document.getElementById('main-tv-view').style.display = 'block'; switchTab('tv', document.getElementById('nav-tv')); }
-                    else { document.getElementById('main-db-view').style.display = 'block'; switchTab('database', document.getElementById('nav-db')); }
-                    renderUI(isTVMode);
-                    window.scrollTo(0, 0);
-                };
+                b.textContent = '← TORNA';
+                b.onclick = goBack;
 
                 const profilePath = person.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : 'https://via.placeholder.com/500x500/111/f5c518?text=NO+FOTO';
                 const bio = person.biography || "Nessuna biografia disponibile in italiano.";
@@ -990,7 +1021,7 @@
                     const characterHtml = roleText ? `<div style="font-size:0.6rem; color:#888; text-align:center; padding-bottom:5px; padding-left:4px; padding-right:4px;">${roleText}</div>` : '';
 
                     filmographyHtml += `
-                        <div class="grid-item" onclick="openDetailsFromActor(${c.id}, ${isTV})">
+                        <div class="grid-item" onclick="navToMovie(${personId}, ${c.id}, ${isTV})">
                             <div class="movie-badge">${year}</div>
                             <div class="type-badge">${icon}</div>
                             <img src="${poster}" class="grid-poster" loading="lazy">
@@ -1019,18 +1050,16 @@
                 const creditsDiv = document.createElement('div');
                 creditsDiv.innerHTML = filmographyHtml;
                 av.appendChild(creditsDiv);
+                
+                if (restoreScroll > 0) { setTimeout(() => window.scrollTo(0, restoreScroll), 10); }
 
             } catch(e) {
                 av.innerHTML = '<p style="color:red; text-align:center;">Errore caricamento dossier attore.</p>';
             }
         }
 
-        function openDetailsFromActor(id, isTV) {
-             document.getElementById('actor-view').style.display = 'none';
-             openDetails(id, isTV);
-        }
-
         function switchTab(t, el) { 
+            navStack = []; // Azzera il Filo di Arianna se si cambia macro-sezione
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); 
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); 
             document.getElementById('tab-' + t).classList.add('active'); 
@@ -1059,6 +1088,7 @@
         }
         
         function viewFromVault(id, isTV) { 
+            navStack = [{type: 'main', scroll: window.scrollY}]; // Ancoraggio dal Preferito
             if (isTV) { switchTab('tv', document.getElementById('nav-tv')); } 
             else { switchTab('database', document.getElementById('nav-db')); }
             openDetails(id, isTV); 
